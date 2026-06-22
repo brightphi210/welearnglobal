@@ -6,7 +6,7 @@ const DashNavbar = () => {
 
     return (
         <nav className="bg-white fixed top-0 z-40 w-full border-b border-gray-100">
-            <div className="px-4 sm:px-6 lg:px-8 py-4">
+            <div className="px-4 sm:px-6 lg:px-8 py-2">
                 <div className="flex items-center justify-between">
 
                     {/* Mobile Logo — hidden on md+ (sidebar takes over) */}

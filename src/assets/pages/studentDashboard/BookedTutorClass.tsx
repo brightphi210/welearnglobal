@@ -135,7 +135,7 @@ const BookedTutorClass = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {bookings.length > 0 ? (
               bookings.map((booking) => (
-                <div key={booking.id} className="bg-neutral-100 rounded-2xl border border-gray-100 overflow-hidden hover:shadow-lg transition-all flex flex-col">
+                <div key={booking.id} className="bg-neutral-100 rounded-2xl border border-gray-300 overflow-hidden hover:shadow-lg transition-all flex flex-col">
                   <div className="p-6 flex flex-col flex-1">
                     {/* Header with Avatar and Tutor Info */}
                     <div className="flex items-start gap-3 mb-4">
