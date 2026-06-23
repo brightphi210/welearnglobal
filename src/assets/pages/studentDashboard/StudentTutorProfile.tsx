@@ -1,5 +1,8 @@
 import { useState } from "react";
+import { FaStar } from "react-icons/fa";
 import { FiAward, FiBook, FiCheckCircle, FiClock, FiFlag, FiMapPin, FiMessageSquare } from "react-icons/fi";
+import TutorsBanner from "../../../components/TutorsBanner";
+
 
 const StudentTutorProfile = () => {
     const [selectedDate, setSelectedDate] = useState(18);
@@ -7,6 +10,7 @@ const StudentTutorProfile = () => {
     const [bookingStep, setBookingStep] = useState(1);
 
     const tutor = {
+        id: 101,
         name: "Dr. Sarah Jenkins",
         title: "Senior Mathematics Professor",
         rating: 4.9,
@@ -30,29 +34,13 @@ const StudentTutorProfile = () => {
     ];
 
     const experience = [
-        {
-            role: "Senior Math Tutor",
-            company: "WeLearnGlobal",
-            period: "2021 - Present",
-        },
-        {
-            role: "Assistant Professor",
-            company: "University of Oxford",
-            period: "2015 - 2021",
-        },
+        { role: "Senior Math Tutor", company: "WeLearnGlobal", period: "2021 - Present" },
+        { role: "Assistant Professor", company: "University of Oxford", period: "2015 - 2021" },
     ];
 
     const education = [
-        {
-            degree: "PhD in Theoretical Mathematics",
-            school: "Cambridge University",
-            year: "2014",
-        },
-        {
-            degree: "M.Sc. in Applied Statistics",
-            school: "Imperial College London",
-            year: "2010",
-        },
+        { degree: "PhD in Theoretical Mathematics", school: "Cambridge University", year: "2014" },
+        { degree: "M.Sc. in Applied Statistics", school: "Imperial College London", year: "2010" },
     ];
 
     const reviews = [
@@ -83,216 +71,217 @@ const StudentTutorProfile = () => {
     ];
 
     const availableTimes = ["09:00 AM", "10:00 AM", "02:00 PM", "04:00 PM"];
-
     const daysInMonth = Array.from({ length: 31 }, (_, i) => i + 1);
+
+    const StarRating = ({ rating, reviews }: { rating: number; reviews: number }) => (
+        <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+                {[...Array(5)].map((_, i) => (
+                    <FaStar key={i} size={10} className={i < Math.round(rating) ? "text-yellow-400" : "text-gray-300"} />
+                ))}
+            </div>
+            <span className="font-bold text-sm text-gray-900">{rating}</span>
+            <span className="text-xs text-gray-600">({reviews} reviews)</span>
+        </div>
+    );
 
     return (
         <div className="md:pl-56 pb-20 md:pb-8">
-            <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-teal-50">
-                <div className="px-4 sm:px-6 lg:px-8 py-8">
+            <div className="min-h-screen bg-white">
+                <div className="px-4 sm:px-6 lg:px-8 pt-8 max-w-7xl mx-auto py-8">
+
                     {/* Breadcrumb */}
-                    <div className="text-sm text-gray-600 mb-8">
-                        <a href="/tutors" className="hover:text-emerald-600">Find Tutors</a>
+                    <div className="text-xs text-gray-600 mb-6">
+                        <a href="/tutors" className="hover:text-green-700">Find Tutors</a>
                         <span className="mx-2">/</span>
-                        <a href="/tutors/math" className="hover:text-emerald-600">Mathematics</a>
+                        <a href="/tutors/math" className="hover:text-green-700">Mathematics</a>
                         <span className="mx-2">/</span>
                         <span className="text-gray-900 font-semibold">{tutor.name}</span>
                     </div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Left Column - Tutor Info */}
-                        <div className="lg:col-span-2">
-                            {/* Profile Header */}
-                            <div className="bg-white rounded-2xl border border-gray-100 p-8 mb-8">
-                                <div className="flex flex-col sm:flex-row gap-8">
-                                    {/* Avatar */}
-                                    <div className="flex-shrink-0">
+                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 text-sm">
+
+                        {/* ── Left Column ── */}
+                        <div className="lg:col-span-3 space-y-4">
+
+                            {/* Profile Header Card — matches TutorCard design */}
+                            <div className="bg-white rounded-3xl border border-gray-200 overflow-hidden">
+                                <TutorsBanner seed={tutor.id} className="h-26 w-full" />
+
+                                <div className="p-6 pt-0">
+                                    <div className="flex items-start justify-between gap-4 mb-2 relative -mt-8">
+                                        {/* Avatar */}
                                         <div className="relative">
-                                            <div className="w-40 h-40 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white font-bold text-4xl">
+                                            <div className="w-16 h-16 rounded-lg bg-green-950 ring-4 ring-gray-100 flex items-center justify-center text-white font-bold text-lg shrink-0">
                                                 SJ
                                             </div>
                                             {tutor.verified && (
-                                                <div className="absolute -top-2 -right-2 bg-emerald-500 rounded-full p-2">
-                                                    <FiCheckCircle className="text-white" size={20} />
+                                                <div className="absolute -top-1.5 -right-1.5 bg-green-600 rounded-full p-1">
+                                                    <FiCheckCircle className="text-white" size={12} />
                                                 </div>
                                             )}
                                         </div>
+
+                                        <button className="p-3 text-gray-500 bg-white rounded-full mt-2 shadow-sm hover:bg-red-50 hover:text-red-500 transition-all">
+                                            <FiFlag size={18} />
+                                        </button>
                                     </div>
 
                                     {/* Info */}
-                                    <div className="flex-1">
-                                        <div className="mb-2">
-                                            <h1 className="text-3xl font-bold text-gray-900">{tutor.name}</h1>
-                                            <p className="text-emerald-600 font-semibold">{tutor.title}</p>
+                                    <div className="flex-1 min-w-0">
+                                        <h1 className="text-lg font-bold text-gray-900">{tutor.name}</h1>
+                                        <p className="text-xs text-gray-600 mb-2">{tutor.title}</p>
+
+                                        <StarRating rating={tutor.rating} reviews={tutor.reviews} />
+
+                                        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-3 mb-4">
+                                            <span className="flex items-center gap-1 text-xs text-gray-600">
+                                                <FiMapPin size={12} className="text-green-700" />
+                                                {tutor.location}
+                                            </span>
+                                            <span className="flex items-center gap-1 text-xs text-gray-600">
+                                                <FiBook size={12} className="text-green-700" />
+                                                {tutor.languages.join(", ")}
+                                            </span>
+                                            <span className="flex items-center gap-1 text-xs text-gray-600">
+                                                <FiClock size={12} className="text-green-700" />
+                                                Response: {tutor.responseTime}
+                                            </span>
                                         </div>
 
-                                        {/* Rating */}
-                                        <div className="flex items-center gap-3 mb-4">
-                                            <div className="flex">
-                                                {[...Array(5)].map((_, i) => (
-                                                    <span key={i} className="text-yellow-400 text-lg">★</span>
-                                                ))}
-                                            </div>
-                                            <span className="text-lg font-bold text-gray-900">{tutor.rating}/5.0</span>
-                                            <span className="text-gray-600">({tutor.reviews} reviews)</span>
+                                        {/* Session type badges */}
+                                        <div className="flex gap-2 mb-4">
+                                            <span className="px-2 py-1 bg-green-50 text-green-700 rounded text-xs font-semibold">Online</span>
+                                            <span className="px-2 py-1 bg-orange-50 text-orange-700 rounded text-xs font-semibold">Onsite</span>
                                         </div>
 
-                                        {/* Details */}
-                                        <div className="space-y-3 mb-6">
-                                            <div className="flex items-center gap-2 text-gray-600">
-                                                <FiMapPin size={16} className="text-emerald-600" />
-                                                <span>Resides in {tutor.location}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-gray-600">
-                                                <FiBook size={16} className="text-emerald-600" />
-                                                <span>{tutor.languages.join(", ")}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-gray-600">
-                                                <FiClock size={16} className="text-emerald-600" />
-                                                <span>Typical Response: {tutor.responseTime}</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Actions */}
-                                        <div className="flex gap-3">
-                                            <button className="flex-1 px-6 py-3 bg-emerald-500 text-white rounded-lg font-semibold hover:bg-emerald-600 transition-all flex items-center justify-center gap-2">
-                                                <FiMessageSquare size={18} />
+                                        {/* Actions — message stays solid, secondary uses white/border format */}
+                                        <div className="flex gap-2">
+                                            <button className="flex-1 px-4 py-3 bg-green-900 text-white rounded-full font-semibold text-sm flex items-center justify-center gap-2 hover:bg-green-800 transition-all">
+                                                <FiMessageSquare size={14} />
                                                 Message Sarah
-                                            </button>
-                                            <button className="px-4 py-3 border border-gray-200 text-gray-600 rounded-lg hover:bg-red-50 hover:text-red-600 transition-all">
-                                                <FiFlag size={18} />
                                             </button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* About Section */}
-                            <div className="bg-white rounded-2xl border border-gray-100 p-8 mb-8">
-                                <h2 className="text-2xl font-bold text-gray-900 mb-4">About Dr. Jenkins</h2>
-                                <p className="text-gray-600 leading-relaxed mb-6 whitespace-pre-line">{tutor.bio}</p>
+                            {/* About */}
+                            <div className="bg-neutral-100 rounded-md border border-neutral-100 p-4 sm:p-6">
+                                <h2 className="font-bold text-gray-900 mb-3">About Dr. Jenkins</h2>
+                                <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line">{tutor.bio}</p>
                             </div>
 
-                            {/* Expertise Section */}
-                            <div className="bg-white rounded-2xl border border-gray-100 p-8 mb-8">
-                                <h3 className="text-xl font-bold text-gray-900 mb-4">Areas of Expertise</h3>
-                                <div className="flex flex-wrap gap-3">
+                            {/* Expertise */}
+                            <div className="bg-neutral-100 rounded-md border border-neutral-100 p-4 sm:p-6">
+                                <h3 className="font-bold text-gray-900 mb-3">Areas of Expertise</h3>
+                                <div className="flex flex-wrap gap-2">
                                     {expertise.map((skill, idx) => (
-                                        <span key={idx} className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-full text-sm font-semibold">
+                                        <span key={idx} className="px-3 py-1 bg-gray-200 text-gray-700 font-semibold rounded-full text-[10px]">
                                             {skill}
                                         </span>
                                     ))}
                                 </div>
                             </div>
 
-                            {/* Experience and Education */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                                {/* Experience */}
-                                <div className="bg-white rounded-2xl border border-gray-100 p-8">
-                                    <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                                        <FiAward size={20} className="text-emerald-600" />
+                            {/* Experience & Education */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="bg-neutral-100 rounded-md border border-neutral-100 p-4 sm:p-6">
+                                    <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                        <FiAward size={14} className="text-green-700" />
                                         Experience
                                     </h3>
-                                    <div className="space-y-6">
+                                    <div className="space-y-4">
                                         {experience.map((exp, idx) => (
                                             <div key={idx}>
-                                                <h4 className="font-semibold text-gray-900">{exp.role}</h4>
-                                                <p className="text-sm text-emerald-600">{exp.company} • {exp.period}</p>
+                                                <h4 className="font-semibold text-xs text-gray-900">{exp.role}</h4>
+                                                <p className="text-[10px] text-green-700">{exp.company} • {exp.period}</p>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
 
-                                {/* Education */}
-                                <div className="bg-white rounded-2xl border border-gray-100 p-8">
-                                    <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                                        <FiBook size={20} className="text-emerald-600" />
+                                <div className="bg-neutral-100 rounded-md border border-neutral-100 p-4 sm:p-6">
+                                    <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                        <FiBook size={14} className="text-green-700" />
                                         Education
                                     </h3>
-                                    <div className="space-y-6">
+                                    <div className="space-y-4">
                                         {education.map((edu, idx) => (
                                             <div key={idx}>
-                                                <h4 className="font-semibold text-gray-900">{edu.degree}</h4>
-                                                <p className="text-sm text-emerald-600">{edu.school} • {edu.year}</p>
+                                                <h4 className="font-semibold text-xs text-gray-900">{edu.degree}</h4>
+                                                <p className="text-[10px] text-green-700">{edu.school} • {edu.year}</p>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Reviews Section */}
-                            <div className="bg-white rounded-2xl border border-gray-100 p-8">
-                                <div className="flex items-center justify-between mb-6">
-                                    <h3 className="text-2xl font-bold text-gray-900">Student Reviews</h3>
-                                    <div className="flex items-center gap-2">
-                                        <span className="flex">
-                                            {[...Array(5)].map((_, i) => (
-                                                <span key={i} className="text-yellow-400">★</span>
-                                            ))}
-                                        </span>
-                                        <span className="font-bold text-gray-900">4.9 / 5.0</span>
-                                    </div>
+                            {/* Reviews */}
+                            <div className="bg-neutral-100 rounded-md border border-neutral-100 p-4 sm:p-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="font-bold text-gray-900">Student Reviews</h3>
+                                    <StarRating rating={4.9} reviews={tutor.reviews} />
                                 </div>
 
-                                <div className="space-y-6">
+                                <div className="space-y-4">
                                     {reviews.map((review) => (
-                                        <div key={review.id} className="border-b border-gray-100 pb-6 last:border-b-0">
-                                            <div className="flex items-center justify-between mb-2">
-                                                <h4 className="font-semibold text-gray-900">{review.author}</h4>
-                                                <span className="text-sm text-gray-500">{review.date}</span>
+                                        <div key={review.id} className="border-b border-gray-200 pb-4 last:border-b-0">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <h4 className="font-semibold text-xs text-gray-900">{review.author}</h4>
+                                                <span className="text-[10px] text-gray-500">{review.date}</span>
                                             </div>
-                                            <div className="flex items-center gap-2 mb-3">
-                                                <div className="flex">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <div className="flex items-center gap-0.5">
                                                     {[...Array(5)].map((_, i) => (
-                                                        <span key={i} className={i < Math.round(review.rating) ? "text-yellow-400" : "text-gray-300"}>★</span>
+                                                        <FaStar key={i} size={9} className={i < Math.round(review.rating) ? "text-yellow-400" : "text-gray-300"} />
                                                     ))}
                                                 </div>
                                                 {review.verified && (
-                                                    <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full font-semibold">
+                                                    <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-semibold">
                                                         Verified
                                                     </span>
                                                 )}
                                             </div>
-                                            <p className="text-gray-600">{review.text}</p>
+                                            <p className="text-xs text-gray-600">{review.text}</p>
                                         </div>
                                     ))}
                                 </div>
 
-                                <button className="w-full mt-8 py-3 text-emerald-600 font-semibold hover:text-emerald-700 transition-all">
+                                <button className="w-full mt-6 py-2.5 border border-gray-200 text-xs font-semibold text-gray-700 rounded-sm hover:bg-gray-50 transition-all">
                                     View All Reviews
                                 </button>
                             </div>
                         </div>
 
-                        {/* Right Column - Booking */}
+                        {/* ── Right Column — Booking ── */}
                         <div className="lg:col-span-1">
-                            <div className="bg-white rounded-2xl border border-gray-100 p-6 sm:p-8 sticky top-24">
-                                <h3 className="text-2xl font-bold text-gray-900 mb-2">Book a Session</h3>
-                                <p className="text-emerald-600 font-bold text-xl mb-6">${tutor.price}<span className="text-sm text-gray-600 font-normal">/hr</span></p>
+                            <div className="bg-neutral-100 rounded-md border border-neutral-100 p-4 sm:p-6 sticky top-24">
+                                <h3 className="font-bold text-gray-900 mb-1">Book a Session</h3>
+                                <p className="text-green-700 font-bold text-lg mb-4">
+                                    ${tutor.price}<span className="text-xs text-gray-600 font-normal">/hr</span>
+                                </p>
 
                                 {bookingStep === 1 && (
                                     <>
-                                        <div className="mb-6">
-                                            <label className="block text-sm font-semibold text-gray-800 mb-3">
-                                                Session Type
-                                            </label>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                <button className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg font-semibold text-sm border-2 border-emerald-500">
-                                                    Online
-                                                </button>
-                                                <button className="px-4 py-2 bg-gray-50 text-gray-600 rounded-lg font-semibold text-sm border-2 border-gray-200 hover:border-emerald-500 hover:text-emerald-600 transition-all">
-                                                    On-site
-                                                </button>
+                                        {/* Session Type */}
+                                        <div className="mb-4">
+                                            <label className="block text-xs font-semibold text-gray-800 mb-2">Session Type</label>
+                                            <div className="flex gap-2">
+                                                {["Online", "On-site"].map((type) => (
+                                                    <button key={type} className={`flex-1 px-3 py-2 rounded-sm font-semibold text-xs border transition-all ${type === "Online" ? "bg-green-100 text-green-700 border-green-300" : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"}`}>
+                                                        {type}
+                                                    </button>
+                                                ))}
                                             </div>
                                         </div>
 
-                                        <div className="mb-6">
-                                            <label className="block text-sm font-semibold text-gray-800 mb-3">
-                                                October 2024
-                                            </label>
-                                            <div className="grid grid-cols-7 gap-2">
+                                        {/* Calendar */}
+                                        <div className="mb-4">
+                                            <label className="block text-xs font-semibold text-gray-800 mb-2">October 2024</label>
+                                            <div className="grid grid-cols-7 gap-1">
                                                 {["M", "T", "W", "T", "F", "S", "S"].map((day, idx) => (
-                                                    <div key={idx} className="text-center text-xs font-semibold text-gray-600 py-2">
+                                                    <div key={idx} className="text-center text-[10px] font-semibold text-gray-500 py-1">
                                                         {day}
                                                     </div>
                                                 ))}
@@ -300,10 +289,7 @@ const StudentTutorProfile = () => {
                                                     <button
                                                         key={day}
                                                         onClick={() => setSelectedDate(day)}
-                                                        className={`py-2 rounded-lg text-sm font-medium transition-all ${selectedDate === day
-                                                            ? "bg-emerald-500 text-white"
-                                                            : "bg-gray-50 text-gray-700 hover:bg-emerald-100"
-                                                            }`}
+                                                        className={`py-1.5 rounded-sm text-[10px] font-medium transition-all ${selectedDate === day ? "bg-green-900 text-white" : "bg-gray-50 text-gray-700 border border-gray-200 hover:bg-green-100"}`}
                                                     >
                                                         {day}
                                                     </button>
@@ -311,19 +297,15 @@ const StudentTutorProfile = () => {
                                             </div>
                                         </div>
 
-                                        <div className="mb-6">
-                                            <label className="block text-sm font-semibold text-gray-800 mb-3">
-                                                Available Times (GMT)
-                                            </label>
+                                        {/* Time Slots */}
+                                        <div className="mb-4">
+                                            <label className="block text-xs font-semibold text-gray-800 mb-2">Available Times (GMT)</label>
                                             <div className="grid grid-cols-2 gap-2">
                                                 {availableTimes.map((time) => (
                                                     <button
                                                         key={time}
                                                         onClick={() => setSelectedTime(time)}
-                                                        className={`py-2 rounded-lg text-sm font-medium transition-all ${selectedTime === time
-                                                            ? "bg-emerald-500 text-white"
-                                                            : "bg-gray-50 text-gray-700 hover:bg-emerald-100 border border-gray-200"
-                                                            }`}
+                                                        className={`py-2 rounded-sm text-[10px] font-semibold transition-all ${selectedTime === time ? "bg-green-100 text-green-700 border border-green-300" : "bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100"}`}
                                                     >
                                                         {time}
                                                     </button>
@@ -331,30 +313,30 @@ const StudentTutorProfile = () => {
                                             </div>
                                         </div>
 
-                                        <div className="bg-emerald-50 rounded-lg p-4 mb-6">
-                                            <p className="text-sm text-gray-600 mb-2">
-                                                <span className="font-semibold text-gray-900">Session Fee (1hr)</span><br />
-                                                ${tutor.price}.00
-                                            </p>
-                                            <p className="text-sm text-gray-600 mb-2">
-                                                <span className="font-semibold text-gray-900">Service Fee</span><br />
-                                                $2.50
-                                            </p>
-                                            <div className="border-t border-emerald-200 pt-2 mt-2">
-                                                <p className="text-sm font-bold text-gray-900">
-                                                    Total: ${tutor.price + 2.50}
-                                                </p>
+                                        {/* Fee Summary */}
+                                        <div className="bg-gray-200 rounded-sm p-3 mb-4 space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-semibold text-gray-900">Session Fee (1hr)</span>
+                                                <span className="text-xs text-gray-700">${tutor.price}.00</span>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-xs font-semibold text-gray-900">Service Fee</span>
+                                                <span className="text-xs text-gray-700">$2.50</span>
+                                            </div>
+                                            <div className="border-t border-gray-300 pt-1.5 flex items-center justify-between">
+                                                <span className="text-xs font-bold text-gray-900">Total</span>
+                                                <span className="text-xs font-bold text-gray-900">${tutor.price + 2.50}</span>
                                             </div>
                                         </div>
 
                                         <button
                                             onClick={() => setBookingStep(2)}
-                                            className="w-full py-3 bg-gradient-to-r from-emerald-400 to-emerald-600 text-white rounded-lg font-bold hover:opacity-90 transition-all"
+                                            className="w-full py-3 bg-green-900 text-white rounded-sm font-bold text-xs hover:bg-green-800 transition-all"
                                         >
                                             Confirm Booking
                                         </button>
 
-                                        <p className="text-xs text-gray-600 text-center mt-4">
+                                        <p className="text-[10px] text-gray-500 text-center mt-3">
                                             You won't be charged yet. Cancellation is free up to 24 hours before the session.
                                         </p>
                                     </>
@@ -362,19 +344,19 @@ const StudentTutorProfile = () => {
 
                                 {bookingStep === 2 && (
                                     <div className="text-center">
-                                        <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                            <FiCheckCircle className="text-emerald-600" size={32} />
+                                        <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                                            <FiCheckCircle className="text-green-700" size={28} />
                                         </div>
-                                        <h4 className="text-lg font-bold text-gray-900 mb-2">Booking Confirmed!</h4>
-                                        <p className="text-sm text-gray-600 mb-6">
+                                        <h4 className="text-sm font-bold text-gray-900 mb-1">Booking Confirmed!</h4>
+                                        <p className="text-xs text-gray-600 mb-5">
                                             Your session with Dr. Sarah Jenkins is confirmed for October {selectedDate}, 2024 at {selectedTime}
                                         </p>
-                                        <button className="w-full py-3 bg-emerald-500 text-white rounded-lg font-bold hover:bg-emerald-600 transition-all mb-3">
+                                        <button className="w-full py-2.5 bg-green-900 text-white rounded-sm font-bold text-xs hover:bg-green-800 transition-all mb-2">
                                             View Confirmation
                                         </button>
                                         <button
                                             onClick={() => setBookingStep(1)}
-                                            className="w-full py-3 border border-emerald-500 text-emerald-600 rounded-lg font-bold hover:bg-emerald-50 transition-all"
+                                            className="w-full py-2.5 border border-gray-200 text-xs font-semibold text-gray-700 rounded-sm hover:bg-gray-50 transition-all"
                                         >
                                             Book Another Session
                                         </button>
@@ -382,6 +364,7 @@ const StudentTutorProfile = () => {
                                 )}
                             </div>
                         </div>
+
                     </div>
                 </div>
             </div>

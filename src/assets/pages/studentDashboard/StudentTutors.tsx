@@ -9,6 +9,7 @@ import {
     FiX
 } from "react-icons/fi";
 import { Link } from "react-router-dom";
+import TutorsBanner from "../../../components/TutorsBanner";
 
 type SelectedFilters = {
     subject: string;
@@ -169,44 +170,50 @@ const StudentTutors = () => {
     );
 
     const TutorCard = ({ tutor }: { tutor: typeof tutors[0] }) => (
-        <div className="bg-neutral-100 rounded-md border border-neutral-100 overflow-hidden hover:shadow-lg transition-all">
-            <div className="p-3">
-                <div className="items-start gap-4 mb-2 relative">
-                    <div className="w-12 h-12 mb-4 rounded-md bg-neutral-200 flex items-center justify-center text-neutral-800 font-bold text-lg shrink-0">
+        <div className="bg-white rounded-3xl border border-gray-200 overflow-hidden transition-all">
+            {/* Banner */}
+            <TutorsBanner seed={tutor.id} className="h-26 w-full" />
+
+            <div className="p-6 pt-0 flex flex-col h-full">
+                <div className="flex items-start justify-between gap-4 mb-2 relative -mt-8">
+                    <div className="w-16 h-16 rounded-lg bg-green-950 ring-4 ring-gray-100 flex items-center justify-center text-white font-bold text-lg shrink-0">
                         {tutor.image}
                     </div>
-                    <div className="flex-1 min-w-0">
-                        <h3 className="font-bold text-gray-900 text-base">{tutor.name}</h3>
-                        <p className="lg:text-xs text-sm text-gray-600 line-clamp-2">{tutor.title}</p>
-                    </div>
-                    <button className="p-2 text-gray-400 right-5 top-0 absolute hover:text-emerald-600 transition-colors">
+                    <button className="p-3 text-green-800 bg-white rounded-full mt-2 shadow-sm">
                         <FiBookmark size={25} />
                     </button>
                 </div>
 
+                {/* Name and Title */}
                 <div className="mb-4">
-                    <div className="flex flex-wrap gap-2">
-                        {tutor.tags.map((tag, idx) => (
-                            <span key={idx} className="px-3 py-1 bg-gray-200 text-gray-700 font-semibold rounded-full text-[10px]">
-                                {tag}
-                            </span>
-                        ))}
-                    </div>
+                    <h4 className="text-lg font-bold text-gray-900">{tutor.name}</h4>
+                    <p className="text-xs text-gray-600 line-clamp-2 leading-tight">{tutor.title}</p>
                 </div>
 
+                {/* Tags */}
+                <div className="flex flex-wrap gap-2 mb-2">
+                    {tutor.tags.map((tag, idx) => (
+                        <span key={idx} className="px-2 py-1 bg-gray-200 text-gray-700 font-semibold rounded-full text-[10px]">
+                            {tag}
+                        </span>
+                    ))}
+                </div>
+
+                {/* Rating */}
                 <div className="mb-2">
                     <StarRating rating={tutor.rating} reviews={tutor.reviews} />
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-gray-300 mb-4">
-                    <div className="flex items-center gap-2">
+                {/* Session Type and Price */}
+                <div className="flex items-center justify-between pt-2 border-t border-gray-300 mb-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                         {tutor.sessionType.includes("online") && (
-                            <span className="px-2 py-1 bg-green-50 text-green-700 rounded-md text-xs font-semibold">
+                            <span className="px-2 py-1 bg-green-50 text-green-700 rounded text-xs font-semibold">
                                 Online
                             </span>
                         )}
                         {tutor.sessionType.includes("on-site") && (
-                            <span className="px-2 py-1 bg-orange-50 text-orange-700 rounded-md text-xs font-semibold">
+                            <span className="px-2 py-1 bg-orange-50 text-orange-700 rounded text-xs font-semibold">
                                 Onsite
                             </span>
                         )}
@@ -217,13 +224,12 @@ const StudentTutors = () => {
                     </div>
                 </div>
 
-                <div>
-                    <Link to={`/student/dashboard/tutor/${tutor.id}`}>
-                        <button className="px-4 py-3 w-full bg-emerald-900 text-white rounded-sm font-semibold text-xs">
-                            View Profile
-                        </button>
-                    </Link>
-                </div>
+                {/* Action Button — white with border format */}
+                <Link to={`/student/dashboard/tutor/${tutor.id}`}>
+                    <button className="w-full px-4 py-3 border-2 border-green-700 text-green-700 bg-white rounded-full font-semibold transition-all text-sm hover:bg-green-50">
+                        View Profile
+                    </button>
+                </Link>
             </div>
         </div>
     );
@@ -242,7 +248,7 @@ const StudentTutors = () => {
         <div className="border-b border-gray-200 py-4">
             <button
                 onClick={() => toggleFilter(name)}
-                className="w-full flex items-center justify-between font-semibold text-gray-900 hover:text-emerald-600 transition-colors"
+                className="w-full flex items-center justify-between font-semibold text-gray-900 hover:text-green-600 transition-colors"
             >
                 <span className="text-xs tracking-wide">{title}</span>
                 <FiChevronDown
@@ -266,7 +272,7 @@ const StudentTutors = () => {
                         onChange={(e) =>
                             setSelectedFilters((prev) => ({ ...prev, subject: e.target.value }))
                         }
-                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100"
                     />
                 </div>
             </FilterSection>
@@ -281,7 +287,7 @@ const StudentTutors = () => {
                         onChange={(e) =>
                             setSelectedFilters((prev) => ({ ...prev, location: e.target.value }))
                         }
-                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100"
+                        className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100"
                     />
                 </div>
             </FilterSection>
@@ -294,7 +300,7 @@ const StudentTutors = () => {
                         onChange={(e) =>
                             setSelectedFilters((prev) => ({ ...prev, priceMin: Number(e.target.value) }))
                         }
-                        className="px-3 py-2 rounded border border-gray-200 text-sm focus:outline-none focus:border-emerald-400"
+                        className="px-3 py-2 rounded border border-gray-200 text-sm focus:outline-none focus:border-green-400"
                     />
                     <input
                         type="number"
@@ -302,7 +308,7 @@ const StudentTutors = () => {
                         onChange={(e) =>
                             setSelectedFilters((prev) => ({ ...prev, priceMax: Number(e.target.value) }))
                         }
-                        className="px-3 py-2 rounded border border-gray-200 text-sm focus:outline-none focus:border-emerald-400"
+                        className="px-3 py-2 rounded border border-gray-200 text-sm focus:outline-none focus:border-green-400"
                     />
                 </div>
             </FilterSection>
@@ -319,7 +325,7 @@ const StudentTutors = () => {
                                 }))
                             }
                             className={`px-2 py-2 rounded text-xs font-semibold transition-all flex-1 ${selectedFilters.sessionType === type.toLowerCase()
-                                ? "bg-emerald-100 text-emerald-700 border border-emerald-300"
+                                ? "bg-green-100 text-green-700 border border-green-300"
                                 : "bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100"
                                 }`}
                         >
@@ -336,7 +342,7 @@ const StudentTutors = () => {
                             key={day}
                             onClick={() => handleAvailabilityChange(day)}
                             className={`py-2 rounded-sm text-xs font-semibold transition-all ${selectedFilters.availability.includes(day)
-                                ? "bg-emerald-100 text-emerald-700 border border-emerald-300"
+                                ? "bg-green-100 text-green-700 border border-green-300"
                                 : "bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100"
                                 }`}
                         >
@@ -369,7 +375,7 @@ const StudentTutors = () => {
                             >
                                 <FiFilter size={20} className="text-gray-600" />
                                 {activeFilterCount > 0 && (
-                                    <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-emerald-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                                    <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-green-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                                         {activeFilterCount}
                                     </span>
                                 )}
@@ -401,7 +407,7 @@ const StudentTutors = () => {
                                     <button
                                         key={idx}
                                         className={`w-10 h-10 rounded-lg font-semibold text-xs transition-all ${page === 1
-                                            ? "bg-emerald-700 text-white"
+                                            ? "bg-green-700 text-white"
                                             : "border border-gray-200 text-gray-700 hover:bg-gray-50"
                                             }`}
                                     >
@@ -442,7 +448,7 @@ const StudentTutors = () => {
                     <div className="flex items-center gap-2">
                         <h3 className="text-base font-bold text-gray-900">Filters</h3>
                         {activeFilterCount > 0 && (
-                            <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full">
+                            <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded-full">
                                 {activeFilterCount} active
                             </span>
                         )}
@@ -481,7 +487,7 @@ const StudentTutors = () => {
                     </button>
                     <button
                         onClick={() => setMobileFilterOpen(false)}
-                        className="flex-[2] py-3 rounded-lg bg-emerald-900 text-white text-sm font-semibold hover:bg-emerald-800 transition-all"
+                        className="flex-[2] py-3 rounded-lg bg-green-900 text-white text-sm font-semibold hover:bg-green-800 transition-all"
                     >
                         Show Results
                     </button>
@@ -491,12 +497,12 @@ const StudentTutors = () => {
             {/* Floating Filter FAB (mobile only) — hidden when sheet is open */}
             <button
                 onClick={() => setMobileFilterOpen(true)}
-                className={`md:hidden fixed bottom-28 right-4 p-5 bg-emerald-800 border-4 border-white text-white rounded-full shadow-lg transition-all ${mobileFilterOpen ? "opacity-0 pointer-events-none scale-90" : "opacity-100 scale-100"
+                className={`md:hidden fixed bottom-28 right-4 p-5 bg-green-800 border-4 border-white text-white rounded-full shadow-lg transition-all ${mobileFilterOpen ? "opacity-0 pointer-events-none scale-90" : "opacity-100 scale-100"
                     }`}
             >
                 <FiFilter size={24} />
                 {activeFilterCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-white text-emerald-800 text-[10px] font-bold rounded-full flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-white text-green-800 text-[10px] font-bold rounded-full flex items-center justify-center">
                         {activeFilterCount}
                     </span>
                 )}

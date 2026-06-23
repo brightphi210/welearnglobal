@@ -3,6 +3,7 @@ import {
     FiHome, FiLogOut, FiMessageSquare, FiSettings,
     FiUser
 } from "react-icons/fi";
+import { HiDotsVertical } from "react-icons/hi";
 import { Link, useLocation } from "react-router-dom";
 
 const DashSideBar = () => {
@@ -26,8 +27,8 @@ const DashSideBar = () => {
 
                 {/* Logo */}
                 <div className="px-6 pt-8 pb-5 border-b border-white/10">
-                    <span className="text-lg font-semibold tracking-tight text-emerald-300">
-                        We<span className="text-emerald-400">learn</span>
+                    <span className="text-lg font-semibold tracking-tight text-green-300">
+                        We<span className="text-green-400">learn</span>
                     </span>
                 </div>
 
@@ -38,8 +39,8 @@ const DashSideBar = () => {
                                 key={link}
                                 to={link}
                                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all font-medium text-sm ${isActive(link)
-                                    ? "bg-emerald-100 text-emerald-800"
-                                    : "text-emerald-50 hover:bg-emerald-50/10 hover:text-emerald-300"
+                                    ? "bg-green-100 text-green-800"
+                                    : "text-green-50 hover:bg-green-50/10 hover:text-green-300"
                                     }`}
                             >
                                 <Icon size={18} />
@@ -51,7 +52,7 @@ const DashSideBar = () => {
 
                 {/* Logout */}
                 <div className="px-3 py-5 border-t border-white/10">
-                    <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-red-500/10 hover:text-red-400 transition-all font-medium text-sm">
+                    <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-neutral-400 hover:bg-red-500/10 hover:text-red-400 transition-all font-medium text-sm">
                         <FiLogOut size={18} />
                         <span>Sign Out</span>
                     </button>
@@ -59,42 +60,42 @@ const DashSideBar = () => {
             </aside>
 
             {/* Mobile Bottom Navigation */}
-            <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-40">
-                <div className="flex justify-around items-center h-20 px-2">
+            <nav className="md:hidden fixed bottom-2 left-3 right-3 rounded-full bg-green-950 border-t-4 border-neutral-100 z-40">
+                <div className="flex justify-around items-center h-18 px-2">
                     {navItems.slice(0, 5).map(({ label, icon: Icon, link }) => (
                         <Link
                             key={link}
                             to={link}
-                            className={`flex flex-col items-center justify-center w-16 h-16 rounded-lg transition-all ${isActive(link)
-                                ? "bg-emerald-100 text-emerald-600"
-                                : "text-gray-500 hover:bg-emerald-50 hover:text-emerald-500"
+                            className={`flex flex-col items-center justify-center w-14 h-12 rounded-2xl transition-all ${isActive(link)
+                                ? "bg-green-100 text-green-600"
+                                : "text-white "
                                 }`}
                             title={label}
                         >
-                            <Icon size={22} />
-                            <span className="text-[10px] mt-1 font-medium">{label.split(" ")[0]}</span>
+                            <Icon size={24} />
+                            <span className="text-[8px] mt-0.5 font-medium">{label.split(" ")[0]}</span>
                         </Link>
                     ))}
 
                     {/* More Menu */}
                     <div className="relative group">
-                        <button className={`flex flex-col items-center justify-center w-16 h-16 rounded-lg transition-all ${navItems.slice(5).some(({ link }) => isActive(link))
-                            ? "bg-emerald-100 text-emerald-600"
-                            : "text-gray-500 hover:bg-emerald-50"
+                        <button className={`flex flex-col items-center justify-center w-12 h-12 rounded-full transition-all ${navItems.slice(5).some(({ link }) => isActive(link))
+                            ? "bg-green-100 text-green-600"
+                            : "text-white hover:bg-green-50"
                             }`}>
-                            <FiSettings size={22} />
-                            <span className="text-xs mt-1 font-medium">More</span>
+                            <HiDotsVertical size={22} />
+                            <span className="text-[8px] mt-1 font-medium">More</span>
                         </button>
 
                         {/* Dropdown */}
-                        <div className="absolute bottom-20 right-0 bg-white rounded-xl border border-gray-100 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all w-48">
+                        <div className="absolute bottom-20 right-0 bg-white rounded-xl border border-neutral-100 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all w-48">
                             {navItems.slice(5).map(({ label, icon: Icon, link }) => (
                                 <Link
                                     key={link}
                                     to={link}
                                     className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all ${isActive(link)
-                                        ? "bg-emerald-100 text-emerald-700"
-                                        : "text-gray-600 hover:bg-emerald-50 hover:text-emerald-600"
+                                        ? "bg-green-100 text-green-700"
+                                        : "text-neutral-600 hover:bg-green-50 hover:text-green-600"
                                         }`}
                                 >
                                     <Icon size={16} />
