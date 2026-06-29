@@ -5,7 +5,7 @@ import {
 } from "react-icons/fi";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
-const DashSideBar = () => {
+const TutorDashSideBar = () => {
     const location = useLocation();
 
     const navItems = [
@@ -110,4 +110,4 @@ const DashSideBar = () => {
     );
 };
 
-export default DashSideBar;
+export default TutorDashSideBar;

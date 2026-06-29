@@ -337,32 +337,6 @@ const StudentProfile = () => {
                         )}
                     </div>
 
-                    {/* Account Statistics */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="bg-white rounded-2xl border border-gray-200 p-6 text-center">
-                            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                                <span className="text-lg font-bold text-green-700">📚</span>
-                            </div>
-                            <p className="text-xs text-gray-600 mb-1">Active Subscriptions</p>
-                            <p className="text-2xl font-bold text-gray-900">5</p>
-                        </div>
-
-                        <div className="bg-white rounded-2xl border border-gray-200 p-6 text-center">
-                            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                                <span className="text-lg font-bold text-green-700">✅</span>
-                            </div>
-                            <p className="text-xs text-gray-600 mb-1">Sessions Completed</p>
-                            <p className="text-2xl font-bold text-gray-900">24</p>
-                        </div>
-
-                        <div className="bg-white rounded-2xl border border-gray-200 p-6 text-center">
-                            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-3">
-                                <span className="text-lg font-bold text-green-700">⭐</span>
-                            </div>
-                            <p className="text-xs text-gray-600 mb-1">Average Rating</p>
-                            <p className="text-2xl font-bold text-gray-900">4.8</p>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>

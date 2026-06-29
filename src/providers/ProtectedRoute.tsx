@@ -1,26 +1,34 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-const ProtectedRoute = ({ element }: any) => {
+interface ProtectedRouteProps {
+  element: React.ReactNode;
+  allowedRole: "tutor" | "student";
+}
+
+const ProtectedRoute = ({ element, allowedRole }: ProtectedRouteProps) => {
   const navigate = useNavigate();
-  // const isAuthenticated = localStorage.getItem("betamindToken");
-  const isAuthenticated = 'welearngABC'
-  const isTutor = false
+
+  const token = localStorage.getItem("welearnToken");
+  const role = (localStorage.getItem("welearnRole") as "tutor" | "student") || "tutor";
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate("/login");
+    if (!token) {
+      navigate("/login", { replace: true });
+      return;
     }
-    // else if (isAuthenticated && isTutor) {
-    //   navigate("/tutor/dashboard/overview");
-    // }
 
-    // else if (isAuthenticated && !isTutor) {
-    //   navigate("/student/dashboard/overview");
-    // }
-  }, [isAuthenticated, navigate, isTutor]);
+    if (role !== allowedRole) {
+      navigate(
+        role === "tutor" ? "/tutor/dashboard/overview" : "/student/dashboard/overview",
+        { replace: true }
+      );
+    }
+  }, [token, role, allowedRole, navigate]);
 
-  return isAuthenticated ? element : null;
+  if (!token || role !== allowedRole) return null;
+
+  return <>{element}</>;
 };
 
 export default ProtectedRoute;

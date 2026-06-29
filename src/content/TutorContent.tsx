@@ -1,15 +1,15 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import Overview from '../assets/pages/tutorDashboard/Overview'
 
-const Content = () => {
+const TutorContent = () => {
     return (
         <div className='main-content h-[98vh] w-full overflow-y-scroll'>
             <Routes>
-                <Route path='/' element={<Navigate to={'/tutor/dashboard/overview'} />} />
-                <Route path='/tutor/dashboard/overview' element={<Overview />} />
+                <Route index element={<Navigate to="overview" replace />} />
+                <Route path='overview' element={<Overview />} />
             </Routes>
         </div>
     )
 }
 
-export default Content
+export default TutorContent

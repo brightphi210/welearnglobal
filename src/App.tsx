@@ -1,47 +1,57 @@
 // import { GoogleOAuthProvider } from '@react-oauth/google'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
-// import DashNavbar from './component/DashNavbar'
-// import SideBar from './component/SideBar'
 import Home from './assets/pages/Home'
 import Login from './assets/pages/Login'
 import Signup from './assets/pages/Signup'
 import DashNavbar from './components/DashNavbar'
 import DashSideBar from './components/DashSideBar'
-import Content2 from './content/Content2'
+import TutorDashNavbar from './components/TutorDashNavbar.'
+import TutorDashSideBar from './components/TutorDashSideBar'
+import StudentContent from './content/StudentContent'
+import TutorContent from './content/TutorContent'
 import './index.css'
 import AuthProvider from './providers/AuthProvider'
 import ProtectedRoute from './providers/ProtectedRoute'
 
 const App = () => {
-  // const YOUR_GOOGLE_CLIENT_ID = "849861043227-982qa4p2jeqj6nja96tv8cdm5h3sm6lg.apps.googleusercontent.com"
-
   return (
     <>
-      {/* <GoogleOAuthProvider clientId={YOUR_GOOGLE_CLIENT_ID}> */}
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            <Route path='/login' element={<Login />} />
-            <Route path='/signup' element={<Signup />} />
-            <Route path='/' element={<Home />} />
+            <Route path="/" element={<Home />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+
             <Route
-              path="*"
+              path="/student/dashboard/*"
               element={
                 <ProtectedRoute
+                  allowedRole="student"
                   element={
                     <div className="flex min-h-screen bg-white">
-                      {/* Sidebar */}
                       <DashSideBar />
-
-                      {/* Main Content Area */}
-                      <div className="flex-1 ">
-                        {/* Fixed Navbar */}
+                      <div className="flex-1">
                         <DashNavbar />
+                        <StudentContent />
+                      </div>
+                    </div>
+                  }
+                />
+              }
+            />
 
-                        {/* Scrollable Content */}
-                        <div className="w-full">
-                          <Content2 />
-                        </div>
+            <Route
+              path="/tutor/dashboard/*"
+              element={
+                <ProtectedRoute
+                  allowedRole="tutor"
+                  element={
+                    <div className="flex min-h-screen bg-white">
+                      <TutorDashNavbar />
+                      <div className="flex-1">
+                        <TutorDashSideBar />
+                        <TutorContent />
                       </div>
                     </div>
                   }
@@ -51,7 +61,6 @@ const App = () => {
           </Routes>
         </BrowserRouter>
       </AuthProvider>
-      {/* </GoogleOAuthProvider> */}
     </>
   )
 }

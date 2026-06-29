@@ -2,7 +2,7 @@ import { useState } from "react";
 import { FiBell, FiMessageSquare } from "react-icons/fi";
 import { IoNotificationsOutline } from "react-icons/io5";
 
-const DashNavbar = () => {
+const TutorDashNavbar = () => {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     return (
@@ -55,4 +55,4 @@ const DashNavbar = () => {
     );
 };
 
-export default DashNavbar;
+export default TutorDashNavbar;
