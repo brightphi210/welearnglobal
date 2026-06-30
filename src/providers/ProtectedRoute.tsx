@@ -10,7 +10,7 @@ const ProtectedRoute = ({ element, allowedRole }: ProtectedRouteProps) => {
   const navigate = useNavigate();
 
   const token = localStorage.getItem("welearnToken");
-  const role = (localStorage.getItem("welearnRole") as "tutor" | "student") || "tutor";
+  const role = (localStorage.getItem("welearnRole") as "tutor" | "student") || "student";
 
   useEffect(() => {
     if (!token) {

@@ -1,10 +1,10 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
-import BookedTutorClass from '../assets/pages/studentDashboard/BookedTutorClass'
-import StudentMessages from '../assets/pages/studentDashboard/StudentMessages'
-import StudentOverview from '../assets/pages/studentDashboard/StudentOverview'
-import StudentProfile from '../assets/pages/studentDashboard/StudentProfile'
-import StudentTutorProfile from '../assets/pages/studentDashboard/StudentTutorProfile'
-import StudentTutors from '../assets/pages/studentDashboard/StudentTutors'
+import BookedTutorClass from '../pages/studentDashboard/BookedTutorClass'
+import StudentMessages from '../pages/studentDashboard/StudentMessages'
+import StudentOverview from '../pages/studentDashboard/StudentOverview'
+import StudentProfile from '../pages/studentDashboard/StudentProfile'
+import StudentTutorProfile from '../pages/studentDashboard/StudentTutorProfile'
+import StudentTutors from '../pages/studentDashboard/StudentTutors'
 
 const StudentContent = () => {
     return (

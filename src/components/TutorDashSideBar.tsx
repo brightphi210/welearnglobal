@@ -9,12 +9,12 @@ const TutorDashSideBar = () => {
     const location = useLocation();
 
     const navItems = [
-        { id: "home", label: "Home", icon: FiHome, link: "/student/dashboard/overview" },
-        { id: "tutors", label: "Tutors", icon: FiCompass, link: "/student/dashboard/tutors" },
-        { id: "bookings", label: "Bookings", icon: FiCalendar, link: "/student/dashboard/bookings" },
-        { id: "messages", label: "Messages", icon: FiMessageSquare, link: "/student/dashboard/messages" },
-        { id: "profile", label: "Profile", icon: FiUser, link: "/student/dashboard/profile" },
-        // { id: "settings", label: "Settings", icon: FiSettings, link: "/student/dashboard/settings" },
+        { id: "home", label: "Home", icon: FiHome, link: "/tutor/dashboard/overview" },
+        { id: "tutors", label: "Wallet", icon: FiCompass, link: "/tutor/dashboard/wallet" },
+        { id: "bookings", label: "Bookings", icon: FiCalendar, link: "/tutor/dashboard/bookings" },
+        { id: "messages", label: "Messages", icon: FiMessageSquare, link: "/tutor/dashboard/messages" },
+        { id: "profile", label: "Profile", icon: FiUser, link: "/tutor/dashboard/profile" },
+        // { id: "settings", label: "Settings", icon: FiSettings, link: "/tutor/dashboard/settings" },
     ];
 
     const isActive = (link: string) => location.pathname === link;

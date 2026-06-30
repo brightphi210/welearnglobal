@@ -1,8 +1,5 @@
 // import { GoogleOAuthProvider } from '@react-oauth/google'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import Home from './assets/pages/Home'
-import Login from './assets/pages/Login'
-import Signup from './assets/pages/Signup'
 import DashNavbar from './components/DashNavbar'
 import DashSideBar from './components/DashSideBar'
 import TutorDashNavbar from './components/TutorDashNavbar.'
@@ -10,6 +7,9 @@ import TutorDashSideBar from './components/TutorDashSideBar'
 import StudentContent from './content/StudentContent'
 import TutorContent from './content/TutorContent'
 import './index.css'
+import Home from './pages/Home'
+import Login from './pages/Login'
+import Signup from './pages/Signup'
 import AuthProvider from './providers/AuthProvider'
 import ProtectedRoute from './providers/ProtectedRoute'
 
@@ -29,7 +29,7 @@ const App = () => {
                 <ProtectedRoute
                   allowedRole="student"
                   element={
-                    <div className="flex min-h-screen bg-white">
+                    <div className="flex min-h-screen bg-gray-50">
                       <DashSideBar />
                       <div className="flex-1">
                         <DashNavbar />
@@ -47,7 +47,7 @@ const App = () => {
                 <ProtectedRoute
                   allowedRole="tutor"
                   element={
-                    <div className="flex min-h-screen bg-white">
+                    <div className="flex min-h-screen bg-gray-50">
                       <TutorDashNavbar />
                       <div className="flex-1">
                         <TutorDashSideBar />
