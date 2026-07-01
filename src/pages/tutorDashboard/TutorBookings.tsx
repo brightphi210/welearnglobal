@@ -2,11 +2,9 @@ import { useState } from "react";
 import {
     FiArrowRight,
     FiCalendar,
-    FiCheck,
     FiClock,
     FiMessageCircle,
-    FiSearch,
-    FiX,
+    FiSearch
 } from "react-icons/fi";
 
 const TutorBookings = () => {
@@ -76,12 +74,10 @@ const TutorBookings = () => {
             <div className="flex flex-col xs:flex-row sm:flex-row items-stretch gap-2 mt-4">
                 {booking.status === "pending" && (
                     <>
-                        <button className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 bg-green-700 text-white rounded-full text-sm font-semibold hover:bg-green-800 transition-all">
-                            <FiCheck size={14} />
+                        <button className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 bg-green-700 text-white rounded-full text-xs font-semibold hover:bg-green-800 transition-all">
                             Accept
                         </button>
-                        <button className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 border border-gray-300 text-gray-700 rounded-full text-sm font-semibold hover:bg-gray-50 transition-all">
-                            <FiX size={14} />
+                        <button className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 border border-gray-300 text-gray-700 rounded-full text-xs font-semibold hover:bg-gray-50 transition-all">
                             Decline
                         </button>
                     </>
@@ -89,24 +85,24 @@ const TutorBookings = () => {
 
                 {booking.status === "upcoming" && (
                     <>
-                        <button className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 border border-gray-300 text-gray-700 rounded-full text-sm font-semibold hover:bg-gray-50 transition-all">
+                        <button className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 border border-gray-300 text-gray-700 rounded-full text-xs font-semibold hover:bg-gray-50 transition-all">
                             <FiMessageCircle size={14} />
                             Message
                         </button>
-                        <button className="flex-1 px-4 py-2 bg-green-700 text-white rounded-full text-sm font-semibold hover:bg-green-800 transition-all">
+                        <button className="flex-1 px-4 py-2 bg-green-700 text-white rounded-full text-xs font-semibold hover:bg-green-800 transition-all">
                             Launch Session
                         </button>
                     </>
                 )}
 
                 {booking.status === "completed" && (
-                    <button className="w-full px-4 py-2 border-2 border-green-700 text-green-700 rounded-full text-sm font-semibold hover:bg-green-50 transition-all">
+                    <button className="w-full px-4 py-2 border-2 border-green-700 text-green-700 rounded-full text-xs font-semibold hover:bg-green-50 transition-all">
                         View Summary
                     </button>
                 )}
 
                 {booking.status === "cancelled" && (
-                    <button className="w-full px-4 py-2 border border-gray-300 text-gray-500 rounded-full text-sm font-semibold hover:bg-gray-50 transition-all">
+                    <button className="w-full px-4 py-2 border border-gray-300 text-gray-500 rounded-full text-xs font-semibold hover:bg-gray-50 transition-all">
                         View Details
                     </button>
                 )}
@@ -115,7 +111,7 @@ const TutorBookings = () => {
     );
 
     return (
-        <div className="md:pl-56 pb-20 md:pb-8">
+        <div className="md:pl-56 pb-20 md:pb-8 lg:pt-20">
             <div className="min-h-screen pt-8 bg-gray-50 px-4 sm:px-6 lg:px-8 max-w-7xl m-auto">
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
@@ -159,7 +155,7 @@ const TutorBookings = () => {
 
                 {/* Bookings List */}
                 {filteredBookings.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {filteredBookings.map((booking) => (
                             <BookingCard key={booking.id} booking={booking} />
                         ))}

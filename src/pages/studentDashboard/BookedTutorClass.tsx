@@ -3,10 +3,8 @@ import {
   FiArrowRight,
   FiCalendar,
   FiClock,
-  FiMessageSquare,
   FiSearch,
-  FiVideo,
-  FiX,
+  FiVideo
 } from "react-icons/fi";
 
 interface Booking {
@@ -98,15 +96,14 @@ const BookedTutorClass = () => {
         </p>
       )}
 
-      <div className="flex flex-col xs:flex-row sm:flex-row items-stretch gap-2 mt-4">
+      <div className="flex flex-col xs:flex-row sm:flex-row items-stretch gap-2 mt-4 ">
         {booking.status === "Confirmed" && (
           <>
-            <button className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 bg-green-700 text-white rounded-full text-sm font-semibold hover:bg-green-800 transition-all">
+            <button className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 bg-green-700 text-white rounded-full text-xs font-semibold hover:bg-green-800 transition-all">
               <FiVideo size={14} />
               Join Class
             </button>
-            <button className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 border border-gray-300 text-gray-700 rounded-full text-sm font-semibold hover:bg-gray-50 transition-all">
-              <FiMessageSquare size={14} />
+            <button className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 border border-gray-300 text-gray-700 rounded-full text-xs font-semibold hover:bg-gray-50 transition-all">
               Message
             </button>
           </>
@@ -114,21 +111,20 @@ const BookedTutorClass = () => {
 
         {booking.status === "Pending" && (
           <>
-            <button className="flex-1 px-4 py-2 bg-gray-100 text-gray-600 rounded-full text-sm font-semibold cursor-default">
+            <button className="flex-1 px-4 py-2 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold cursor-default">
               Awaiting Confirmation
             </button>
             <button
               onClick={() => handleCancelBooking(booking.id)}
-              className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 border border-gray-300 text-red-600 rounded-full text-sm font-semibold hover:bg-red-50 transition-all"
+              className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 border border-gray-300 text-red-600 rounded-full text-xs font-semibold hover:bg-red-50 transition-all"
             >
-              <FiX size={14} />
               Cancel
             </button>
           </>
         )}
 
         {booking.status === "Cancelled" && (
-          <button className="w-full px-4 py-2 border border-gray-300 text-gray-500 rounded-full text-sm font-semibold hover:bg-gray-50 transition-all">
+          <button className="w-full px-4 py-2 border border-gray-300 text-gray-500 rounded-full text-xs font-semibold hover:bg-gray-50 transition-all">
             View Details
           </button>
         )}
@@ -137,7 +133,7 @@ const BookedTutorClass = () => {
   );
 
   return (
-    <div className="md:pl-56 pb-20 md:pb-8">
+    <div className="md:pl-56 pb-20 md:pb-8 lg:pt-20">
       <div className="min-h-screen pt-8 bg-gray-50 px-4 sm:px-6 lg:px-8 max-w-7xl m-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
@@ -181,7 +177,7 @@ const BookedTutorClass = () => {
 
         {/* Bookings List */}
         {filteredBookings.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {filteredBookings.map((booking) => (
               <BookingCard key={booking.id} booking={booking} />
             ))}
