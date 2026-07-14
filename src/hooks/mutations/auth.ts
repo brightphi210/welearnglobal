@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { get_requests, post_requests, put_request_with_image } from "../helper/AxioHelper";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { patch_requests, post_requests } from "../helper/AxioHelper";
 
 export const useRegistration = () => {
   const registrationMutation = useMutation({
@@ -18,38 +18,55 @@ export const useLogin = () => {
   return loginMutation;
 };
 
-export const useProfile = () => {
-  const { data, isLoading, isError, isFetched, refetch } = useQuery({
-    queryKey: ["profile"],
-    queryFn: async () => {
-      const token = (await localStorage.getItem("accessToken")) || "";
-      return get_requests("profile/", token);
-    },
-  });
 
-  return {
-    profile: data,
-    isLoading,
-    isError,
-    isFetched,
-    refetch,
-  };
-};
 
-export const useUpdateProfile = () => {
+// ========== UPDATE USER PROFILE ==========+
+export const useUpdateUserProfile = () => {
   const queryClient = useQueryClient()
 
-  const updateProfile = useMutation({
+  const updateUserProfile = useMutation({
     mutationFn: async (data: any) => {
-      const token = (await localStorage.getItem("accessToken")) || ""
-      return put_request_with_image(`profile/update/`, data, token)
+      const token = (await localStorage.getItem("welearnToken")) || ""
+      return patch_requests(`users/me/`, data, token)
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["profile"] })
+      queryClient.invalidateQueries({ queryKey: ["userProfile"] })
     },
   })
 
-  return updateProfile
+  return updateUserProfile
 }
 
 
+// ========== CREATE TUTOR PROFILE ==========+
+export const useCreateTutorProfile = () => {
+  const queryClient = useQueryClient()
+
+  const createTutorProfile = useMutation({
+    mutationFn: async (data: any) => {
+      const token = (await localStorage.getItem("welearnToken")) || ""
+      return post_requests(`tutors/my-profile/create/`, data, token)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userProfile"] })
+    },
+  })
+
+  return createTutorProfile
+}
+
+export const useUpdateTutorProfile = () => {
+  const queryClient = useQueryClient()
+
+  const updateTutorProfile = useMutation({
+    mutationFn: async (data: any) => {
+      const token = (await localStorage.getItem("welearnToken")) || ""
+      return patch_requests(`tutors/my-profile/`, data, token)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["userProfile"] })
+    },
+  })
+
+  return updateTutorProfile
+}

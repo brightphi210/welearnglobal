@@ -22,6 +22,7 @@ const TutorDashSideBar = () => {
     const navigate = useNavigate()
     const handleLogout = () => {
         localStorage.removeItem('welearnToken')
+        localStorage.removeItem('welearnRole')
         navigate('/login')
     }
 

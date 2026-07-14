@@ -9,20 +9,19 @@ const axiosInstance = axios.create({
 });
 
 // Redirect to login whenever any request comes back 401 (expired/invalid token)
-axiosInstance.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error?.response?.status === 401) {
-      localStorage.removeItem("wintriceStudentToken");
-      // remove other token keys here too if you store tutor/admin tokens separately
+// axiosInstance.interceptors.response.use(
+//   (response) => response,
+//   (error) => {
+//     if (error?.response?.status === 401) {
+//       localStorage.removeItem("wintriceStudentToken");
 
-      if (window.location.pathname !== "/auth/login") {
-        window.location.href = "/auth/login";
-      }
-    }
-    return Promise.reject(error);
-  }
-);
+//       if (window.location.pathname !== "/login") {
+//         window.location.href = "/login";
+//       }
+//     }
+//     return Promise.reject(error);
+//   }
+// );
 
 export const post_requests = async (url: string, data: any, token = "") => {
   let headers = {};

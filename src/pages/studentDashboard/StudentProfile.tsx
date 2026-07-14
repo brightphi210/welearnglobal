@@ -1,89 +1,118 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { FiCheck, FiEdit, FiSave, FiUpload, FiX } from "react-icons/fi";
-
-interface StudentProfileData {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    bio: string;
-    profileImage: string | null;
-    joinDate: string;
-    timezone: string;
-    preferredLearningStyle: string;
-}
+import LoadingOverlay from "../../components/LoadingOverlay";
+import { useUpdateUserProfile } from "../../hooks/mutations/auth";
+import { useGetUserProfile } from "../../hooks/queries/allQueries";
 
 const StudentProfile = () => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [isEditing, setIsEditing] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
     const [successMessage, setSuccessMessage] = useState("");
-    const [profileImage, setProfileImage] = useState<string | null>(null);
+    const [errorMessage, setErrorMessage] = useState("");
 
-    const [profileData, setProfileData] = useState<StudentProfileData>({
-        id: "STU001",
-        firstName: "Alex",
-        lastName: "Johnson",
-        email: "alex.johnson@email.com",
-        phone: "+1 (555) 123-4567",
-        bio: "Passionate learner focused on mathematics and physics. Preparing for university entrance exams.",
-        profileImage: null,
-        joinDate: "January 15, 2024",
-        timezone: "GMT-5 (Eastern Time)",
-        preferredLearningStyle: "Structured lessons with practice problems",
+    const { userProfile, isLoading } = useGetUserProfile();
+    const user = userProfile?.data;
+
+    const { mutate, isPending } = useUpdateUserProfile();
+
+    // ── Text fields (sent as plain strings) ─────────────────────────────────
+    const [formData, setFormData] = useState({
+        first_name: "",
+        last_name: "",
     });
 
-    const [formData, setFormData] = useState(profileData);
+    // ── Image: keep the actual File separate from the preview URL ──────────
+    const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+    const [profileImagePreview, setProfileImagePreview] = useState<string>("");
 
-    const handleInputChange = (
-        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-    ) => {
+    // Sync form data whenever fetched profile changes
+    useEffect(() => {
+        if (user) {
+            setFormData({
+                first_name: user.first_name || "",
+                last_name: user.last_name || "",
+            });
+            setProfileImagePreview(user.profile_image || "");
+        }
+    }, [user]);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        setFormData((prev) => ({
-            ...prev,
-            [name]: value,
-        }));
+        setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setProfileImage(reader.result as string);
-                setFormData((prev) => ({
-                    ...prev,
-                    profileImage: reader.result as string,
-                }));
-            };
-            reader.readAsDataURL(file);
+            if (file.size > 5 * 1024 * 1024) {
+                setErrorMessage("Image size should be less than 5MB");
+                return;
+            }
+            setProfileImageFile(file);
+            // preview only, not what gets sent
+            setProfileImagePreview(URL.createObjectURL(file));
         }
     };
 
-    const handleSaveChanges = async () => {
-        setIsSaving(true);
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        setProfileData(formData);
-        setIsEditing(false);
-        setIsSaving(false);
-        setSuccessMessage("Profile updated successfully!");
-        setTimeout(() => setSuccessMessage(""), 3000);
+    const handleSaveChanges = () => {
+        setErrorMessage("");
+
+        // ── Build multipart FormData, not JSON ──────────────────────────────
+        const payload = new FormData();
+        payload.append("first_name", formData.first_name);
+        payload.append("last_name", formData.last_name);
+        if (profileImageFile instanceof File) {
+            payload.append("profile_image", profileImageFile, profileImageFile.name);
+        }
+
+        mutate(payload, {
+            onSuccess: () => {
+                setIsEditing(false);
+                setProfileImageFile(null);
+                setSuccessMessage("Profile updated successfully!");
+                setTimeout(() => setSuccessMessage(""), 3000);
+            },
+            onError: (e: any) => {
+                setErrorMessage(
+                    e.response?.data?.message ||
+                    e.response?.data?.detail ||
+                    e.response?.data?.profile_image?.[0] ||
+                    "Failed to update profile."
+                );
+            },
+        });
     };
 
     const handleCancel = () => {
-        setFormData(profileData);
-        setProfileImage(null);
+        if (user) {
+            setFormData({
+                first_name: user.first_name || "",
+                last_name: user.last_name || "",
+            });
+            setProfileImagePreview(user.profile_image || "");
+        }
+        setProfileImageFile(null);
+        setErrorMessage("");
         setIsEditing(false);
     };
 
     const getInitials = () => {
-        return `${formData.firstName[0]}${formData.lastName[0]}`.toUpperCase();
+        const f = formData.first_name?.[0] || "";
+        const l = formData.last_name?.[0] || "";
+        return `${f}${l}`.toUpperCase();
     };
+
+    if (isLoading) {
+        return (
+            <div className="md:pl-56 pb-20 md:pb-8 flex items-center justify-center min-h-screen">
+                <LoadingOverlay visible={isLoading} />
+            </div>
+        );
+    }
 
     return (
         <div className="md:pl-56 pb-20 md:pb-8">
+            <LoadingOverlay visible={isPending} />
             <div className="min-h-screen pt-14 bg-linear-to-br from-green-50 via-white to-teal-50">
                 <div className="px-4 sm:px-6 lg:px-8 pt-8 max-w-4xl mx-auto py-8">
                     {/* Header */}
@@ -91,7 +120,7 @@ const StudentProfile = () => {
                         <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2">
                             My Profile
                         </h1>
-                        <p className="text-gray-600 text-sm">Manage your account information and preferences</p>
+                        <p className="text-gray-600 text-sm">Manage your account information</p>
                     </div>
 
                     {/* Success Message */}
@@ -104,15 +133,22 @@ const StudentProfile = () => {
                         </div>
                     )}
 
-                    {/* Profile Header Card */}
-                    <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 mb-8">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 mb-6">
+                    {/* Error Message */}
+                    {errorMessage && (
+                        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+                            <p className="text-sm font-semibold text-red-600">{errorMessage}</p>
+                        </div>
+                    )}
+
+                    {/* Profile Header Card (no buttons here anymore) */}
+                    <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 mb-6">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
                             {/* Profile Image */}
                             <div className="relative">
-                                <div className="w-24 h-24 rounded-xl bg-green-950 flex items-center justify-center text-white font-bold text-2xl ring-4 ring-gray-100">
-                                    {profileImage || profileData.profileImage ? (
+                                <div className="w-24 h-24 rounded-xl bg-green-950 flex items-center justify-center text-white font-bold text-2xl ring-4 ring-gray-100 overflow-hidden">
+                                    {profileImagePreview ? (
                                         <img
-                                            src={profileImage || profileData.profileImage || ""}
+                                            src={profileImagePreview}
                                             alt="Profile"
                                             className="w-full h-full rounded-xl object-cover"
                                         />
@@ -131,7 +167,7 @@ const StudentProfile = () => {
                                 <input
                                     ref={fileInputRef}
                                     type="file"
-                                    accept="image/*"
+                                    accept="image/png, image/jpeg, image/jpg"
                                     className="hidden"
                                     onChange={handleImageUpload}
                                 />
@@ -140,203 +176,106 @@ const StudentProfile = () => {
                             {/* Quick Info */}
                             <div className="flex-1">
                                 <h2 className="text-2xl font-bold text-gray-900 mb-1">
-                                    {profileData.firstName} {profileData.lastName}
+                                    {user?.full_name || `${formData.first_name} ${formData.last_name}`}
                                 </h2>
-                                <p className="text-gray-600 text-sm mb-3">Student ID: {profileData.id}</p>
-                                <p className="text-gray-600 text-xs mb-3">Member since {profileData.joinDate}</p>
+                                <p className="text-gray-600 text-sm mb-1">{user?.email}</p>
+                                <p className="text-gray-500 text-xs capitalize">{user?.role}</p>
+                            </div>
+                        </div>
+                    </div>
 
-                                {/* Edit Button */}
-                                {!isEditing ? (
-                                    <button
-                                        onClick={() => setIsEditing(true)}
-                                        className="flex items-center gap-2 px-4 py-2.5 bg-green-900 text-white rounded-lg font-semibold text-sm hover:bg-green-800 transition-all"
-                                    >
-                                        <FiEdit size={14} />
-                                        Edit Profile
-                                    </button>
+                    {/* Basic Information */}
+                    <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-6 mb-6">
+                        <h3 className="text-lg font-bold text-gray-900 mb-6">Basic Information</h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* First Name */}
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-900 mb-2">
+                                    First Name
+                                </label>
+                                {isEditing ? (
+                                    <input
+                                        type="text"
+                                        name="first_name"
+                                        value={formData.first_name}
+                                        onChange={handleInputChange}
+                                        disabled={isPending}
+                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent disabled:opacity-60"
+                                    />
                                 ) : (
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={handleSaveChanges}
-                                            disabled={isSaving}
-                                            className="flex items-center gap-2 px-4 py-2.5 bg-green-900 text-white rounded-lg font-semibold text-sm hover:bg-green-800 disabled:opacity-50 transition-all"
-                                        >
-                                            <FiSave size={14} />
-                                            {isSaving ? "Saving..." : "Save Changes"}
-                                        </button>
-                                        <button
-                                            onClick={handleCancel}
-                                            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-lg font-semibold text-sm hover:bg-gray-50 transition-all"
-                                        >
-                                            <FiX size={14} />
-                                            Cancel
-                                        </button>
-                                    </div>
+                                    <p className="text-sm text-gray-600">{formData.first_name}</p>
                                 )}
                             </div>
-                        </div>
-                    </div>
 
-                    {/* Profile Information Sections */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                        {/* Basic Information */}
-                        <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-6">
-                            <h3 className="text-lg font-bold text-gray-900 mb-6">Basic Information</h3>
-
-                            <div className="space-y-4">
-                                {/* First Name */}
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-900 mb-2">
-                                        First Name
-                                    </label>
-                                    {isEditing ? (
-                                        <input
-                                            type="text"
-                                            name="firstName"
-                                            value={formData.firstName}
-                                            onChange={handleInputChange}
-                                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent"
-                                        />
-                                    ) : (
-                                        <p className="text-sm text-gray-600">{profileData.firstName}</p>
-                                    )}
-                                </div>
-
-                                {/* Last Name */}
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-900 mb-2">
-                                        Last Name
-                                    </label>
-                                    {isEditing ? (
-                                        <input
-                                            type="text"
-                                            name="lastName"
-                                            value={formData.lastName}
-                                            onChange={handleInputChange}
-                                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent"
-                                        />
-                                    ) : (
-                                        <p className="text-sm text-gray-600">{profileData.lastName}</p>
-                                    )}
-                                </div>
-
-                                {/* Email */}
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-900 mb-2">
-                                        Email Address
-                                    </label>
-                                    {isEditing ? (
-                                        <input
-                                            type="email"
-                                            name="email"
-                                            value={formData.email}
-                                            onChange={handleInputChange}
-                                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent"
-                                        />
-                                    ) : (
-                                        <p className="text-sm text-gray-600">{profileData.email}</p>
-                                    )}
-                                </div>
-
-                                {/* Phone */}
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-900 mb-2">
-                                        Phone Number
-                                    </label>
-                                    {isEditing ? (
-                                        <input
-                                            type="tel"
-                                            name="phone"
-                                            value={formData.phone}
-                                            onChange={handleInputChange}
-                                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent"
-                                        />
-                                    ) : (
-                                        <p className="text-sm text-gray-600">{profileData.phone}</p>
-                                    )}
-                                </div>
+                            {/* Last Name */}
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-900 mb-2">
+                                    Last Name
+                                </label>
+                                {isEditing ? (
+                                    <input
+                                        type="text"
+                                        name="last_name"
+                                        value={formData.last_name}
+                                        onChange={handleInputChange}
+                                        disabled={isPending}
+                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent disabled:opacity-60"
+                                    />
+                                ) : (
+                                    <p className="text-sm text-gray-600">{formData.last_name}</p>
+                                )}
                             </div>
-                        </div>
 
-                        {/* Learning Preferences */}
-                        <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-6">
-                            <h3 className="text-lg font-bold text-gray-900 mb-6">Learning Preferences</h3>
+                            {/* Email - read only */}
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-900 mb-2">
+                                    Email Address
+                                </label>
+                                <p className="text-sm text-gray-600">{user?.email}</p>
+                            </div>
 
-                            <div className="space-y-4">
-                                {/* Timezone */}
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-900 mb-2">
-                                        Timezone
-                                    </label>
-                                    {isEditing ? (
-                                        <select
-                                            name="timezone"
-                                            value={formData.timezone}
-                                            onChange={handleInputChange}
-                                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent"
-                                        >
-                                            <option>GMT-5 (Eastern Time)</option>
-                                            <option>GMT-6 (Central Time)</option>
-                                            <option>GMT-7 (Mountain Time)</option>
-                                            <option>GMT-8 (Pacific Time)</option>
-                                            <option>GMT (London)</option>
-                                            <option>GMT+1 (Paris)</option>
-                                            <option>GMT+5:30 (India)</option>
-                                            <option>GMT+8 (Singapore)</option>
-                                        </select>
-                                    ) : (
-                                        <p className="text-sm text-gray-600">{profileData.timezone}</p>
-                                    )}
-                                </div>
-
-                                {/* Learning Style */}
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-900 mb-2">
-                                        Preferred Learning Style
-                                    </label>
-                                    {isEditing ? (
-                                        <select
-                                            name="preferredLearningStyle"
-                                            value={formData.preferredLearningStyle}
-                                            onChange={handleInputChange}
-                                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent"
-                                        >
-                                            <option>Structured lessons with practice problems</option>
-                                            <option>One-on-one discussions</option>
-                                            <option>Interactive problem-solving</option>
-                                            <option>Theory-focused approach</option>
-                                            <option>Mix of theory and practice</option>
-                                        </select>
-                                    ) : (
-                                        <p className="text-sm text-gray-600">
-                                            {profileData.preferredLearningStyle}
-                                        </p>
-                                    )}
-                                </div>
+                            {/* Role - read only */}
+                            <div>
+                                <label className="block text-xs font-semibold text-gray-900 mb-2">
+                                    Role
+                                </label>
+                                <p className="text-sm text-gray-600 capitalize">{user?.role}</p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Bio Section */}
-                    <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-6 mb-8">
-                        <h3 className="text-lg font-bold text-gray-900 mb-6">About You</h3>
-
-                        {isEditing ? (
-                            <textarea
-                                name="bio"
-                                value={formData.bio}
-                                onChange={handleInputChange}
-                                rows={4}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-600 focus:border-transparent resize-none"
-                                placeholder="Tell tutors about your learning goals and background..."
-                            />
+                    {/* ── Buttons moved here, below the form ── */}
+                    <div className="flex justify-end gap-3">
+                        {!isEditing ? (
+                            <button
+                                onClick={() => setIsEditing(true)}
+                                className="flex items-center gap-2 px-5 py-2.5 bg-green-900 text-white rounded-lg font-semibold text-sm hover:bg-green-800 transition-all"
+                            >
+                                <FiEdit size={14} />
+                                Edit Profile
+                            </button>
                         ) : (
-                            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
-                                {profileData.bio}
-                            </p>
+                            <>
+                                <button
+                                    onClick={handleCancel}
+                                    disabled={isPending}
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-lg font-semibold text-sm hover:bg-gray-50 disabled:opacity-50 transition-all"
+                                >
+                                    <FiX size={14} />
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSaveChanges}
+                                    disabled={isPending}
+                                    className="flex items-center gap-2 px-5 py-2.5 bg-green-900 text-white rounded-lg font-semibold text-sm hover:bg-green-800 disabled:opacity-50 transition-all"
+                                >
+                                    <FiSave size={14} />
+                                    {isPending ? "Saving..." : "Save Changes"}
+                                </button>
+                            </>
                         )}
                     </div>
-
                 </div>
             </div>
         </div>

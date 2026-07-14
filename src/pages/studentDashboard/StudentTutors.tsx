@@ -9,7 +9,9 @@ import {
     FiX
 } from "react-icons/fi";
 import { Link } from "react-router-dom";
+import LoadingOverlay from "../../components/LoadingOverlay";
 import TutorsBanner from "../../components/TutorsBanner";
+import { useGetTutors } from "../../hooks/queries/allQueries";
 
 type SelectedFilters = {
     subject: string;
@@ -21,16 +23,18 @@ type SelectedFilters = {
     availability: string[];
 };
 
+const DEFAULT_FILTERS: SelectedFilters = {
+    subject: "",
+    location: "",
+    priceMin: 20,
+    priceMax: 150,
+    sessionType: "all",
+    minRating: 0,
+    availability: [],
+};
+
 const StudentTutors = () => {
-    const [selectedFilters, setSelectedFilters] = useState<SelectedFilters>({
-        subject: "",
-        location: "",
-        priceMin: 20,
-        priceMax: 150,
-        sessionType: "all",
-        minRating: 0,
-        availability: [],
-    });
+    const [selectedFilters, setSelectedFilters] = useState<SelectedFilters>(DEFAULT_FILTERS);
 
     const [expandedFilters, setExpandedFilters] = useState({
         subject: true,
@@ -43,92 +47,9 @@ const StudentTutors = () => {
 
     const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
-    const tutors = [
-        {
-            id: 1,
-            name: "Dr. Sarah Mitchell",
-            title: "PhD in Mathematics with 10+ years of teaching experience",
-            rating: 4.9,
-            reviews: 128,
-            price: 45,
-            image: "SM",
-            subjects: ["Calculus", "Linear Algebra"],
-            tags: ["SAT Math"],
-            sessionType: ["online"],
-            bio: "Expert in helping students conquer complex mathematical concepts with patient, structured approach.",
-            verified: true,
-        },
-        {
-            id: 2,
-            name: "James Anderson",
-            title: "Native English Speaker & IELTS Expert. Let's master the language.",
-            rating: 4.8,
-            reviews: 84,
-            price: 35,
-            image: "JA",
-            subjects: ["English", "IELTS"],
-            tags: ["Public Speaking"],
-            sessionType: ["online"],
-            bio: "Specialized in IELTS preparation and conversational English for non-native speakers.",
-            verified: true,
-        },
-        {
-            id: 3,
-            name: "Elena Rodriguez",
-            title: "Passionate Spanish Teacher. Cultural immersion through language.",
-            rating: 5.0,
-            reviews: 42,
-            price: 30,
-            image: "ER",
-            subjects: ["Spanish", "Hispanic Literature"],
-            tags: ["Business Spanish"],
-            sessionType: ["online", "on-site"],
-            bio: "Native Spanish speaker providing cultural immersion and practical language skills.",
-            verified: true,
-        },
-        {
-            id: 4,
-            name: "Prof. Michael Chen",
-            title: "Expert Physics Tutor. Simplifying complex concepts.",
-            rating: 4.7,
-            reviews: 215,
-            price: 60,
-            image: "MC",
-            subjects: ["Physics", "Mechanics"],
-            tags: ["IB Physics"],
-            sessionType: ["online"],
-            bio: "Former university professor bringing real-world physics insights to tutoring.",
-            verified: true,
-        },
-        {
-            id: 5,
-            name: "Sophie Thompson",
-            title: "Professional Designer & Creative Tech Lead. Learn UI/UX Design.",
-            rating: 4.9,
-            reviews: 56,
-            price: 80,
-            image: "ST",
-            subjects: ["UI/UX Design", "Figma"],
-            tags: ["Web Development"],
-            sessionType: ["online"],
-            bio: "Industry professional teaching practical design skills used in top tech companies.",
-            verified: false,
-        },
-        {
-            id: 6,
-            name: "David Wilson",
-            title: "Chartered Accountant (CPA). Practical Accounting and Finance.",
-            rating: 4.8,
-            reviews: 92,
-            price: 55,
-            image: "DW",
-            subjects: ["Accounting", "Finance"],
-            tags: ["Excel"],
-            sessionType: ["on-site"],
-            bio: "Certified accountant with 15+ years of corporate finance experience.",
-            verified: true,
-        },
-    ];
+    // ── API data ──────────────────────────────────────────────────────────
+    const { tutors, isLoading: isTutorLoading } = useGetTutors();
+    const tutorsList = tutors?.data?.results ?? [];
 
     const toggleFilter = (filterName: keyof typeof expandedFilters) => {
         setExpandedFilters((prev) => ({
@@ -145,6 +66,8 @@ const StudentTutors = () => {
                 : [...prev.availability, day],
         }));
     };
+
+    const resetFilters = () => setSelectedFilters(DEFAULT_FILTERS);
 
     const activeFilterCount = [
         selectedFilters.subject,
@@ -169,15 +92,23 @@ const StudentTutors = () => {
         </div>
     );
 
-    const TutorCard = ({ tutor }: { tutor: typeof tutors[0] }) => (
+    const TutorCard = ({ tutor }: { tutor: any }) => (
         <div className="bg-white rounded-3xl border border-gray-200 overflow-hidden transition-all">
             {/* Banner */}
             <TutorsBanner seed={tutor.id} className="h-26 w-full" />
 
             <div className="p-6 pt-0 flex flex-col h-full">
                 <div className="flex items-start justify-between gap-4 mb-2 relative -mt-8">
-                    <div className="w-16 h-16 rounded-lg bg-green-950 ring-4 ring-gray-100 flex items-center justify-center text-white font-bold text-lg shrink-0">
-                        {tutor.image}
+                    <div className="w-16 h-16 rounded-lg bg-green-950 ring-4 ring-gray-100 flex items-center justify-center text-white font-bold text-lg shrink-0 overflow-hidden">
+                        {tutor.image_url || tutor.profile_image ? (
+                            <img
+                                src={tutor.image_url || tutor.profile_image}
+                                alt={tutor.name}
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            tutor.image || tutor.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2)
+                        )}
                     </div>
                     <button className="p-3 text-green-800 bg-white rounded-full mt-2 shadow-sm">
                         <FiBookmark size={25} />
@@ -192,7 +123,7 @@ const StudentTutors = () => {
 
                 {/* Tags */}
                 <div className="flex flex-wrap gap-2 mb-2">
-                    {tutor.tags.map((tag, idx) => (
+                    {tutor.tags?.map((tag: string, idx: number) => (
                         <span key={idx} className="px-2 py-1 bg-gray-200 text-gray-700 font-semibold rounded-full text-[10px]">
                             {tag}
                         </span>
@@ -207,12 +138,12 @@ const StudentTutors = () => {
                 {/* Session Type and Price */}
                 <div className="flex items-center justify-between pt-2 border-t border-gray-300 mb-2">
                     <div className="flex items-center gap-2 flex-wrap">
-                        {tutor.sessionType.includes("online") && (
+                        {tutor.sessionType?.includes("online") && (
                             <span className="px-2 py-1 bg-green-50 text-green-700 rounded text-xs font-semibold">
                                 Online
                             </span>
                         )}
-                        {tutor.sessionType.includes("on-site") && (
+                        {tutor.sessionType?.includes("on-site") && (
                             <span className="px-2 py-1 bg-orange-50 text-orange-700 rounded text-xs font-semibold">
                                 Onsite
                             </span>
@@ -231,6 +162,29 @@ const StudentTutors = () => {
                     </button>
                 </Link>
             </div>
+        </div>
+    );
+
+    // ── Empty state for when no tutors match / are available ────────────────
+    const EmptyTutorsState = () => (
+        <div className="flex flex-col items-center justify-center text-center py-16 px-6 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+            <div className="w-16 h-16 rounded-full bg-white border border-gray-200 flex items-center justify-center mb-4">
+                <FiSearch size={24} className="text-gray-400" />
+            </div>
+            <h4 className="text-base font-bold text-gray-900 mb-1">No tutors found</h4>
+            <p className="text-sm text-gray-500 max-w-sm mb-6">
+                {activeFilterCount > 0
+                    ? "No tutors match your current filters. Try adjusting or clearing them to see more results."
+                    : "There are no tutors available right now. Please check back again soon."}
+            </p>
+            {activeFilterCount > 0 && (
+                <button
+                    onClick={resetFilters}
+                    className="px-5 py-2.5 bg-green-900 text-white rounded-full font-semibold text-sm hover:bg-green-800 transition-all"
+                >
+                    Clear All Filters
+                </button>
+            )}
         </div>
     );
 
@@ -297,6 +251,7 @@ const StudentTutors = () => {
                     <input
                         type="number"
                         placeholder="Min"
+                        value={selectedFilters.priceMin}
                         onChange={(e) =>
                             setSelectedFilters((prev) => ({ ...prev, priceMin: Number(e.target.value) }))
                         }
@@ -305,6 +260,7 @@ const StudentTutors = () => {
                     <input
                         type="number"
                         placeholder="Max"
+                        value={selectedFilters.priceMax}
                         onChange={(e) =>
                             setSelectedFilters((prev) => ({ ...prev, priceMax: Number(e.target.value) }))
                         }
@@ -356,6 +312,7 @@ const StudentTutors = () => {
 
     return (
         <div className="md:pl-56 pb-20 md:pb-8">
+            <LoadingOverlay visible={isTutorLoading} />
             <div className="min-h-screen pt-8 bg-gray-50">
                 <div className="px-4 sm:px-6 lg:px-8 max-w-7xl m-auto py-8">
 
@@ -365,7 +322,11 @@ const StudentTutors = () => {
                             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-1">
                                 Find a Tutor
                             </h1>
-                            <p className="text-gray-600 text-sm">1,248 tutors available now</p>
+                            <p className="text-gray-600 text-sm">
+                                {tutorsList.length > 0
+                                    ? `${tutorsList.length} tutor${tutorsList.length === 1 ? "" : "s"} available now`
+                                    : "Browse available tutors"}
+                            </p>
                         </div>
 
                         {/* Mobile filter trigger button (top-right header) */}
@@ -392,32 +353,38 @@ const StudentTutors = () => {
 
                         {/* Tutors Grid */}
                         <div className="md:col-span-3">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-8">
-                                {tutors.map((tutor) => (
-                                    <TutorCard key={tutor.id} tutor={tutor} />
-                                ))}
-                            </div>
+                            {!isTutorLoading && tutorsList.length === 0 ? (
+                                <EmptyTutorsState />
+                            ) : (
+                                <>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6 mb-8">
+                                        {tutorsList.map((tutor: any) => (
+                                            <TutorCard key={tutor.id} tutor={tutor} />
+                                        ))}
+                                    </div>
 
-                            {/* Pagination */}
-                            <div className="flex items-center justify-center gap-2">
-                                <button className="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-all">
-                                    Previous
-                                </button>
-                                {[1, 2, 3, "...", 42].map((page, idx) => (
-                                    <button
-                                        key={idx}
-                                        className={`w-9 h-9 rounded-full font-semibold text-xs transition-all ${page === 1
-                                            ? "bg-green-700 text-white"
-                                            : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
-                                            }`}
-                                    >
-                                        {page}
-                                    </button>
-                                ))}
-                                <button className="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-all">
-                                    Next
-                                </button>
-                            </div>
+                                    {/* Pagination */}
+                                    <div className="flex items-center justify-center gap-2">
+                                        <button className="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-all">
+                                            Previous
+                                        </button>
+                                        {[1, 2, 3, "...", 42].map((page, idx) => (
+                                            <button
+                                                key={idx}
+                                                className={`w-9 h-9 rounded-full font-semibold text-xs transition-all ${page === 1
+                                                    ? "bg-green-700 text-white"
+                                                    : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
+                                                    }`}
+                                            >
+                                                {page}
+                                            </button>
+                                        ))}
+                                        <button className="px-4 py-2 bg-white border border-gray-200 rounded-full text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-all">
+                                            Next
+                                        </button>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -470,17 +437,7 @@ const StudentTutors = () => {
                 {/* Sheet footer: actions */}
                 <div className="px-5 py-4 border-t border-gray-100 flex gap-3 bg-white">
                     <button
-                        onClick={() => {
-                            setSelectedFilters({
-                                subject: "",
-                                location: "",
-                                priceMin: 20,
-                                priceMax: 150,
-                                sessionType: "all",
-                                minRating: 0,
-                                availability: [],
-                            });
-                        }}
+                        onClick={resetFilters}
                         className="flex-1 py-3 rounded-full border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all"
                     >
                         Clear All

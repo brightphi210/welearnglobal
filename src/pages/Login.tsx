@@ -2,89 +2,65 @@ import { useState } from "react";
 import { FaApple } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 import { FiEye, FiEyeOff, FiLock, FiMail } from "react-icons/fi";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { toast, ToastContainer } from "react-toastify";
 import AuthNavbar from "../components/AuthNavbar";
 import LoadingOverlay from "../components/LoadingOverlay";
+import { useLogin } from "../hooks/mutations/auth";
 // import { useLogin } from "../hooks/mutation/allMutattion";
 
-// Toggle this when your backend endpoint is ready
-const USE_DUMMY_LOGIN = true;
-
 const Login = () => {
-    const [loginID, setLoginID] = useState("");
+    const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [errorMsg, setErrorMsg] = useState("");
     const [showPassword, setShowPassword] = useState(false);
-    const [isPending, setIsPending] = useState(false);
+    // const [isPending, setIsPending] = useState(false);
 
-    // const { mutate: login, isPending } = useLogin();
+    const { mutate: login, isPending } = useLogin();
     const navigate = useNavigate();
 
     const handleSignIn = (e: React.FormEvent) => {
         e.preventDefault();
         setErrorMsg("");
-
-        if (USE_DUMMY_LOGIN) {
-            setIsPending(true);
-
-            // Simulate network delay
-            setTimeout(() => {
-                setIsPending(false);
-
-                const dummyRole: "tutor" | "student" = "student";
-                const dummyToken = "aabbcc";
-
-                localStorage.setItem("welearnToken", dummyToken);
-
-                if (dummyRole === "tutor") {
-                    navigate("/tutor/dashboard/overview");
-                } else {
-                    navigate("/student/dashboard/overview");
-                }
-            }, 600);
-
-            return;
-        }
-
-        // --- Real endpoint implementation (re-enable when backend is ready) ---
-        /*
         login(
-            { loginID, password },
+            { email, password },
             {
                 onSuccess: (res) => {
-                    const token = res.data.token;
-                    const role = res.data.role;
-
-                    localStorage.setItem("aiftToken", token);
-
-                    if (role === "tutor") {
-                        navigate("/tutor/dashboard/overview");
-                    } else if (role === "student") {
-                        navigate("/student/dashboard/overview");
-                    } else {
-                        navigate("/overview");
-                    }
+                    const role = res.data.user.role;
+                    const token = res.data.access;
+                    console.log('This is response', token, role)
+                    toast.success("Login successful!");
+                    localStorage.setItem("welearnToken", token);
+                    localStorage.setItem("welearnRole", role);
+                    setTimeout(() => {
+                        if (role === "tutor") {
+                            navigate("/tutor/dashboard/overview");
+                        } else if (role === "student") {
+                            navigate("/student/dashboard/overview");
+                        }
+                    }, 1000);
                 },
                 onError: (e: any) => {
                     setErrorMsg(
-                        e.response?.data?.message || "Login failed. Please check your credentials."
+                        e.response?.data?.message || e.response.data.detail || "Login failed. Please check your credentials."
                     );
+                    console.log('This is error', e.response.data.detail);
                 },
             }
         );
-        */
     };
 
     return (
-        <div className="min-h-screen bg-green-950 flex items-center justify-center px-4 py-12 font-sans">
+        <div className="min-h-screen bg-green-950 flex items-center justify-center px-3 py-12 font-sans">
             <AuthNavbar />
             <LoadingOverlay visible={isPending} />
+            <ToastContainer />
 
             <div className="w-full max-w-lg">
                 {/* Card */}
                 <form
                     onSubmit={handleSignIn}
-                    className="bg-white rounded-2xl border border-gray-100 shadow-xl shadow-gray-100/60 overflow-hidden"
+                    className="bg-white lg:rounded-2xl rounded-md border border-gray-100 lg:shadow-xl shadow-gray-100/60 overflow-hidden"
                 >
                     {/* Header */}
                     <div className="px-8 pt-10 pb-2 text-center border-b border-gray-50">
@@ -105,8 +81,8 @@ const Login = () => {
                                     type="email"
                                     required
                                     disabled={isPending}
-                                    value={loginID}
-                                    onChange={(e) => setLoginID(e.target.value)}
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
                                     placeholder="name@example.com"
                                     className="flex-1 border-none outline-none text-sm text-gray-800 placeholder-gray-400 bg-transparent disabled:opacity-60"
                                 />
@@ -183,9 +159,9 @@ const Login = () => {
                     <div className="px-8 py-5 bg-gray-50 border-t border-gray-100 text-center">
                         <p className="text-sm text-gray-500">
                             Don't have an account?{" "}
-                            <a href="/signup" className="text-emerald-500 font-semibold hover:text-emerald-600 no-underline transition-colors inline-flex items-center gap-1">
+                            <Link to="/signup" className="text-emerald-500 font-semibold hover:text-emerald-600 no-underline transition-colors inline-flex items-center gap-1">
                                 Create an account →
-                            </a>
+                            </Link>
                         </p>
                     </div>
                 </form>
