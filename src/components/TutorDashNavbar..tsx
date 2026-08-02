@@ -1,9 +1,7 @@
-import { useState } from "react";
 import { FiBell, FiMessageSquare } from "react-icons/fi";
 import { IoNotificationsOutline } from "react-icons/io5";
 
 const TutorDashNavbar = () => {
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     return (
         <nav className="bg-white fixed top-0 z-40 w-full border-b border-gray-100">
@@ -39,17 +37,6 @@ const TutorDashNavbar = () => {
                         </button>
                     </div>
                 </div>
-
-                {/* Mobile Search */}
-                {mobileMenuOpen && (
-                    <div className="md:hidden mt-4">
-                        <input
-                            type="text"
-                            placeholder="Search tutors..."
-                            className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
-                        />
-                    </div>
-                )}
             </div>
         </nav>
     );
