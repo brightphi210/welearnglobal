@@ -19,9 +19,9 @@ const Navbar = () => {
     }, [isOpen]);
 
     const navLinks = [
-        { label: "Discover Tutors", href: "#" },
-        { label: "How it works", href: "#" },
-        { label: "Pricing", href: "#" },
+        { label: "How it works", href: "/how-it-works" },
+        { label: "Contact", href: "/contact" },
+        { label: "About", href: "/about" },
     ];
 
     return (

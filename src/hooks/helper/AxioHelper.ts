@@ -1,8 +1,7 @@
 
 import axios from "axios";
 
-const BASE_URL = "https://tutor-platform-api.fly.dev/api/v1/";
-// const BASE_URL = "http://127.0.0.1:8000/api/";
+const BASE_URL = "https://api.welearnglobal.online/api/v1/";
 
 const axiosInstance = axios.create({
   baseURL: BASE_URL,

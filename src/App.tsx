@@ -7,7 +7,10 @@ import TutorDashSideBar from './components/TutorDashSideBar'
 import StudentContent from './content/StudentContent'
 import TutorContent from './content/TutorContent'
 import './index.css'
+import About from './pages/About'
+import Contact from './pages/Contact'
 import Home from './pages/Home'
+import How from './pages/How'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import AuthProvider from './providers/AuthProvider'
@@ -22,6 +25,9 @@ const App = () => {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/how-it-works" element={<How />} />
 
             <Route
               path="/student/dashboard/*"
