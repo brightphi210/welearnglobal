@@ -7,20 +7,20 @@ const axiosInstance = axios.create({
   baseURL: BASE_URL,
 });
 
-// Redirect to login whenever any request comes back 401 (expired/invalid token)
-// axiosInstance.interceptors.response.use(
-//   (response) => response,
-//   (error) => {
-//     if (error?.response?.status === 401) {
-//       localStorage.removeItem("wintriceStudentToken");
+// Redirect to login whenever any request comes back 401(expired / invalid token)
+axiosInstance.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 401) {
+      localStorage.removeItem("wintriceStudentToken");
 
-//       if (window.location.pathname !== "/login") {
-//         window.location.href = "/login";
-//       }
-//     }
-//     return Promise.reject(error);
-//   }
-// );
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const post_requests = async (url: string, data: any, token = "") => {
   let headers = {};

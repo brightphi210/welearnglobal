@@ -21,6 +21,26 @@ export const useGetUserProfile = () => {
 };
 
 
+// ================ TUTOR PROFILE ================
+export const useGetTutorProfile = () => {
+    const { data, isLoading, isError, isFetched, refetch } = useQuery({
+        queryKey: ["tutorProfile"],
+        queryFn: async () => {
+            const token = (await localStorage.getItem("welearnToken")) || "";
+            return get_requests("tutors/my-profile/", token);
+        },
+    });
+
+    return {
+        tutorProfile: data,
+        isLoading,
+        isError,
+        isFetched,
+        refetch,
+    };
+};
+
+
 
 // ============== GET ALL Tutors ===============
 export const useGetTutors = () => {
@@ -43,24 +63,25 @@ export const useGetTutors = () => {
 
 
 
-
-
-// ================ TUTOR PROFILE ================
-
-export const useGetTutorProfile = () => {
+// ============== GET Single Tutor ===============
+export const useGetSingleTutor = (id: string) => {
     const { data, isLoading, isError, isFetched, refetch } = useQuery({
-        queryKey: ["tutorProfile"],
+        queryKey: ["tutors", id],
         queryFn: async () => {
             const token = (await localStorage.getItem("welearnToken")) || "";
-            return get_requests("tutors/my-profile/", token);
+            return get_requests(`tutors/${id}/`, token);
         },
     });
 
     return {
-        tutorProfile: data,
+        tutorData: data,
         isLoading,
         isError,
         isFetched,
         refetch,
     };
 };
+
+
+
+

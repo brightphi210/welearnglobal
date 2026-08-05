@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     FiArrowRight,
     FiCalendar,
@@ -12,9 +12,33 @@ import {
     FiUsers
 } from "react-icons/fi";
 import { Link } from "react-router-dom";
+import ProfileCompletionModal, { getMissingProfileFields } from "../../components/ProfileCompleModal";
+import { useGetTutorProfile } from "../../hooks/queries/allQueries";
 
 const TutorOverview = () => {
     const [range] = useState("Last 7 Days");
+
+    // ── Profile completion modal logic ─────────────────────────────────
+    const { tutorProfile } = useGetTutorProfile();
+    const tutor = tutorProfile?.data;
+
+    const missingFields = getMissingProfileFields(tutor);
+    const [showCompletionModal, setShowCompletionModal] = useState(false);
+
+    useEffect(() => {
+        if (!tutor) return;
+        if (missingFields.length === 0) return;
+
+        const timer = setTimeout(() => {
+            setShowCompletionModal(true);
+        }, 2000);
+
+        return () => clearTimeout(timer);
+    }, [tutor]);
+
+    const handleCloseCompletionModal = () => {
+        setShowCompletionModal(false);
+    };
 
     const stats = [
         {
@@ -318,6 +342,14 @@ const TutorOverview = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Profile completion modal */}
+            {showCompletionModal && (
+                <ProfileCompletionModal
+                    missingFields={missingFields}
+                    onClose={handleCloseCompletionModal}
+                />
+            )}
         </div>
     );
 };

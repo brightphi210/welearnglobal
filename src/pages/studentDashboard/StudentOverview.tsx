@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FaStar } from "react-icons/fa";
 import {
-    FiArrowRight, FiBookmark, FiBookOpen, FiCalendar, FiCode,
+    FiArrowRight, FiBookmark, FiBookOpen, FiCalendar, FiCheckCircle, FiCode,
     FiGlobe, FiGrid, FiMusic, FiSearch, FiZap
 } from "react-icons/fi";
 import { Link } from "react-router-dom";
@@ -15,6 +15,27 @@ interface UpcomingSession {
     startTime: string;
     endTime: string;
     minutesUntil: string;
+}
+
+/* ─── Shape returned by the tutors API ───────────────────────────────── */
+interface TutorData {
+    id: number;
+    full_name: string;
+    email?: string;
+    bio?: string;
+    subjects?: string[] | null;
+    skills?: string[] | null;
+    session_status?: "online" | "onsite" | "both" | string;
+    hourly_rate?: string | number;
+    average_rating?: string | number;
+    total_sessions?: number;
+    is_verified?: boolean;
+    verification_status?: string;
+    location?: string;
+    profile_image?: string | null;
+    banner?: string | null;
+    language?: string;
+    professional_title?: string;
 }
 
 const StudentOverview = () => {
@@ -37,7 +58,7 @@ const StudentOverview = () => {
         { id: 6, name: "All", icon: FiGrid, color: "bg-green-700" },
     ];
 
-    const StarRating = ({ rating, reviews }: any) => (
+    const StarRating = ({ rating, sessions }: { rating: number; sessions: number }) => (
         <div className="flex items-center gap-2">
             <div className="flex items-center gap-1">
                 {[...Array(5)].map((_, i) => (
@@ -48,83 +69,120 @@ const StudentOverview = () => {
                     />
                 ))}
             </div>
-            <span className="font-bold text-sm text-gray-900">{rating}</span>
-            <span className="text-xs text-gray-600">({reviews} reviews)</span>
+            <span className="font-bold text-sm text-gray-900">{rating.toFixed(1)}</span>
+            <span className="text-xs text-gray-600">
+                ({sessions} session{sessions === 1 ? "" : "s"})
+            </span>
         </div>
     );
 
-    const TutorCard = ({ tutor }: any) => (
-        <div className="bg-white rounded-3xl border border-gray-200 overflow-hidden transition-all">
-            {/* Banner */}
-            <TutorsBanner seed={tutor.id} className="h-26 w-full" />
+    const TutorCard = ({ tutor }: { tutor: TutorData }) => {
+        const initials =
+            tutor.full_name
+                ?.split(" ")
+                .map((n) => n[0])
+                .join("")
+                .slice(0, 2)
+                .toUpperCase() || "?";
 
-            <div className="p-6 pt-0 flex flex-col h-full">
-                <div className="flex items-start justify-between gap-4 mb-2 relative -mt-8">
-                    <div className="w-16 h-16 rounded-lg bg-green-950 ring-4 ring-gray-100 flex items-center justify-center text-white font-bold text-lg shrink-0 overflow-hidden">
-                        {tutor.image_url || tutor.profile_image ? (
-                            <img
-                                src={tutor.image_url || tutor.profile_image}
-                                alt={tutor.name}
-                                className="w-full h-full object-cover"
-                            />
-                        ) : (
-                            tutor.image || tutor.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2)
-                        )}
+        const rating = Number(tutor.average_rating) || 0;
+        // Prefer subjects for tags; fall back to skills if no subjects set
+        const tags = tutor.subjects?.length ? tutor.subjects : tutor.skills || [];
+        const rate = Number(tutor.hourly_rate) || 0;
+
+        return (
+            <div className="bg-white rounded-3xl border border-gray-200 overflow-hidden transition-all">
+                {/* Banner — use the tutor's real uploaded banner if present */}
+                {tutor.banner ? (
+                    <img
+                        src={tutor.banner}
+                        alt={`${tutor.full_name} banner`}
+                        className="h-26 w-full object-cover"
+                    />
+                ) : (
+                    <TutorsBanner seed={tutor.id} className="h-26 w-full" />
+                )}
+
+                <div className="p-6 pt-0 flex flex-col h-full">
+                    <div className="flex items-start justify-between gap-4 mb-2 relative -mt-8">
+                        <div className="w-16 h-16 rounded-lg bg-green-950 ring-4 ring-gray-100 flex items-center justify-center text-white font-bold text-lg shrink-0 overflow-hidden">
+                            {tutor.profile_image ? (
+                                <img
+                                    src={tutor.profile_image}
+                                    alt={tutor.full_name}
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                initials
+                            )}
+                        </div>
+                        <button className="p-3 text-green-800 bg-white rounded-full mt-2 shadow-sm">
+                            <FiBookmark size={25} />
+                        </button>
                     </div>
-                    <button className="p-3 text-green-800 bg-white rounded-full mt-2 shadow-sm">
-                        <FiBookmark size={25} />
-                    </button>
-                </div>
 
-                {/* Name and Title */}
-                <div className="mb-4">
-                    <h4 className="text-lg font-bold text-gray-900">{tutor.name}</h4>
-                    <p className="text-xs text-gray-600 line-clamp-2 leading-tight">{tutor.title}</p>
-                </div>
-
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2 mb-2">
-                    {tutor.tags?.map((tag: string, idx: number) => (
-                        <span key={idx} className="px-2 py-1 bg-gray-200 text-gray-700 font-semibold rounded-full text-[10px]">
-                            {tag}
-                        </span>
-                    ))}
-                </div>
-
-                {/* Rating */}
-                <div className="mb-2">
-                    <StarRating rating={tutor.rating} reviews={tutor.reviews} />
-                </div>
-
-                {/* Session Type and Price */}
-                <div className="flex items-center justify-between pt-2 border-t border-gray-300 mb-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                        {tutor.sessionType?.includes("online") && (
-                            <span className="px-2 py-1 bg-green-50 text-green-700 rounded text-xs font-semibold">
-                                Online
-                            </span>
-                        )}
-                        {tutor.sessionType?.includes("on-site") && (
-                            <span className="px-2 py-1 bg-orange-50 text-orange-700 rounded text-xs font-semibold">
-                                Onsite
-                            </span>
-                        )}
+                    {/* Name and Title */}
+                    <div className="mb-4">
+                        <div className="flex items-center gap-1.5">
+                            <h4 className="text-lg font-bold text-gray-900 truncate">{tutor.full_name}</h4>
+                            {tutor.is_verified && (
+                                <FiCheckCircle size={14} className="text-green-600 shrink-0" />
+                            )}
+                        </div>
+                        <p className="text-xs text-gray-600 line-clamp-2 leading-tight">
+                            {tutor.professional_title || "Mentor"}
+                        </p>
                     </div>
-                    <div className="text-right">
-                        <span className="text-lg font-bold text-gray-900">${tutor.price}</span>
-                        <span className="text-xs text-gray-600">/hr</span>
-                    </div>
-                </div>
 
-                {/* Action Button — white with border format */}
-                <Link to={`/student/dashboard/tutor/${tutor.id}`}>
-                    <button className="w-full px-4 py-3 border-2 border-green-700 text-green-700 bg-white rounded-full font-semibold transition-all text-sm hover:bg-green-50">
-                        View Profile
-                    </button>
-                </Link>
+                    {/* Tags (subjects, or skills as fallback) */}
+                    {tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-2">
+                            {tags.slice(0, 3).map((tag, idx) => (
+                                <span
+                                    key={idx}
+                                    className="px-2 py-1 bg-gray-200 text-gray-700 font-semibold rounded-full text-[10px]"
+                                >
+                                    {tag}
+                                </span>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Rating */}
+                    <div className="mb-2">
+                        <StarRating rating={rating} sessions={tutor.total_sessions ?? 0} />
+                    </div>
+
+                    {/* Session Type and Price */}
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-300 mb-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            {(tutor.session_status === "online" || tutor.session_status === "both") && (
+                                <span className="px-2 py-1 bg-green-50 text-green-700 rounded text-xs font-semibold">
+                                    Online
+                                </span>
+                            )}
+                            {(tutor.session_status === "onsite" || tutor.session_status === "both") && (
+                                <span className="px-2 py-1 bg-orange-50 text-orange-700 rounded text-xs font-semibold">
+                                    Onsite
+                                </span>
+                            )}
+                        </div>
+                        <div className="text-right">
+                            <span className="text-lg font-bold text-gray-900">${rate.toFixed(0)}</span>
+                            <span className="text-xs text-gray-600">/hr</span>
+                        </div>
+                    </div>
+
+                    {/* Action Button */}
+                    <Link to={`/student/dashboard/tutor/${tutor.id}`}>
+                        <button className="w-full px-4 py-3 border-2 border-green-700 text-green-700 bg-white rounded-full font-semibold transition-all text-sm hover:bg-green-50">
+                            View Profile
+                        </button>
+                    </Link>
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     // ── Empty state for when no tutors are available ────────────────────────
     const EmptyTutorsState = () => (
@@ -148,9 +206,9 @@ const StudentOverview = () => {
     const { userProfile, isLoading } = useGetUserProfile();
     const { tutors, isLoading: isTutorLoading } = useGetTutors();
     const user = userProfile?.data;
-    const myTutors = tutors?.data?.results;
+    const myTutors: TutorData[] = tutors?.data?.results || [];
 
-    console.log("My Tutors:", myTutors);
+    console.log("userProfile:", myTutors);
 
     return (
         <div className="md:pl-56 pb-20 md:pb-8">
@@ -253,7 +311,7 @@ const StudentOverview = () => {
                             <EmptyTutorsState />
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
-                                {myTutors?.map((tutor: any) => (
+                                {myTutors.map((tutor) => (
                                     <TutorCard key={tutor.id} tutor={tutor} />
                                 ))}
                             </div>

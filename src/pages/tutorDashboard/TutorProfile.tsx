@@ -13,9 +13,9 @@ import {
     FiDollarSign,
     FiEdit2,
     FiGlobe,
+    FiImage,
     FiLock,
     FiMapPin,
-    FiMessageCircle,
     FiPhone,
     FiPlus,
     FiShield,
@@ -31,8 +31,7 @@ import { useGetTutorProfile, useGetUserProfile } from "../../hooks/queries/allQu
 
 /* ─── Types ──────────────────────────────────────────────────────────── */
 type SessionMode = "online" | "onsite" | "both";
-type PayoutMethod = "bank_transfer" | "paypal";
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3 | 4;
 // empty  -> no profile exists yet, show a call-to-action
 // view   -> profile exists, show it read-only
 // edit   -> the multi-step wizard, used for both first-time creation and updates
@@ -41,52 +40,90 @@ type PageMode = "empty" | "view" | "edit";
 interface ExperienceItem { id: number; role: string; org: string; period: string; }
 interface EducationItem { id: number; degree: string; school: string; year: string; }
 
+interface TimeSlot { id: number; startTime: string; endTime: string; isBooked?: boolean; }
+interface DayAvailability { day: string; enabled: boolean; slots: TimeSlot[]; }
+
 interface ProfileData {
-    // Name/email are read-only here — they come from the base user profile,
-    // not the tutor-profile payload.
     firstName: string; lastName: string; email: string;
     title: string;
     phone: string; bio: string; skills: string[];
     location: string; language: string; responseTime: string;
-    sessionMode: SessionMode; bannerGradient: number;
+    sessionMode: SessionMode;
     experience: ExperienceItem[]; education: EducationItem[];
-    // The backend only stores a flat list of subjects + a single hourly rate —
-    // there is no per-course name/description/level/duration on the API, so
-    // we model exactly that instead of a richer "courses" shape that can
-    // never be reloaded from the server.
     subjects: string[]; hourlyRate: string;
-    payoutMethod: PayoutMethod;
+    availability: DayAvailability[];
     accountName: string; bankName: string; accountNumber: string;
-    routingNumber: string; accountType: "checking" | "savings";
-    paypalEmail: string;
-    // Read-only stats returned by the API — displayed, never edited.
     averageRating: string; totalSessions: number;
     isVerified: boolean; verificationStatus: string;
 }
 
 /* ─── Constants ──────────────────────────────────────────────────────── */
-const BANNER_THEMES = [
-    { gradient: "from-yellow-400 via-lime-600 to-green-800", dir: "bg-gradient-to-br", label: "Sunrise" },
-    { gradient: "from-green-700 via-green-800 to-lime-900", dir: "bg-gradient-to-br", label: "Forest" },
-    { gradient: "from-lime-600 via-green-700 to-green-900", dir: "bg-gradient-to-tr", label: "Lime" },
-    { gradient: "from-green-900 via-teal-800 to-green-700", dir: "bg-gradient-to-bl", label: "Deep" },
-    { gradient: "from-emerald-600 via-green-700 to-lime-800", dir: "bg-gradient-to-br", label: "Emerald" },
-    { gradient: "from-yellow-600 via-green-600 to-emerald-800", dir: "bg-gradient-to-tr", label: "Gold" },
-];
-
-const HATCH = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14'%3E%3Cpath d='M0 14L14 0' stroke='white' stroke-width='0.6' opacity='0.5'/%3E%3C/svg%3E";
 const SUBJECTS = ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Spanish", "French", "Music", "Programming", "Design", "Business", "History"];
 const LANGUAGES = ["English", "Spanish", "French", "Mandarin Chinese", "Arabic"];
 
 const STEPS = [
     { id: 1, label: "Basic Details", short: "Personal info, skills & bio" },
     { id: 2, label: "Teaching Setup", short: "Status, subjects & rate" },
-    { id: 3, label: "Banking Info", short: "Payout account & payment" },
+    { id: 3, label: "Availability", short: "Your weekly schedule" },
+    { id: 4, label: "Banking Info", short: "Payout account & payment" },
 ];
 
+const DAYS_OF_WEEK = [
+    { key: "monday", label: "Monday" },
+    { key: "tuesday", label: "Tuesday" },
+    { key: "wednesday", label: "Wednesday" },
+    { key: "thursday", label: "Thursday" },
+    { key: "friday", label: "Friday" },
+    { key: "saturday", label: "Saturday" },
+    { key: "sunday", label: "Sunday" },
+];
+
+// Keep legacy numeric mapping for backwards compatibility with older API payloads.
+const DAY_TO_INDEX: Record<string, number> = {
+    sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6,
+};
+const INDEX_TO_DAY: Record<number, string> = Object.fromEntries(
+    Object.entries(DAY_TO_INDEX).map(([day, idx]) => [idx, day])
+);
+
+const normalizeDayKey = (value: unknown): string | undefined => {
+    if (typeof value === "number") return INDEX_TO_DAY[value];
+    if (typeof value === "string") {
+        const normalized = value.trim().toLowerCase();
+        if (normalized in DAY_TO_INDEX) return normalized;
+
+        const dayNameMap: Record<string, string> = {
+            sunday: "sunday",
+            monday: "monday",
+            tuesday: "tuesday",
+            wednesday: "wednesday",
+            thursday: "thursday",
+            friday: "friday",
+            saturday: "saturday",
+        };
+
+        if (dayNameMap[normalized]) return dayNameMap[normalized];
+
+        const match = DAYS_OF_WEEK.find(d =>
+            d.key === normalized ||
+            d.label.toLowerCase() === normalized ||
+            normalized === d.key.slice(0, 3)
+        );
+        return match?.key;
+    }
+    return undefined;
+};
+
+const MAX_SLOTS_PER_DAY = 3;
+
+const defaultAvailability: DayAvailability[] = DAYS_OF_WEEK.map(d => ({
+    day: d.key,
+    enabled: false,
+    slots: [],
+}));
+
 /* ─── Banner Component ───────────────────────────────────────────────── */
-const BannerPreview = ({ themeIdx, imageUrl, className = "" }: { themeIdx: number; imageUrl?: string; className?: string }) => {
-    // If a real banner image was uploaded, show that instead of the gradient theme.
+const BannerPreview = ({ imageUrl, className = "" }: { imageUrl?: string; className?: string }) => {
     if (imageUrl) {
         return (
             <div className={`relative overflow-hidden ${className}`}>
@@ -96,112 +133,9 @@ const BannerPreview = ({ themeIdx, imageUrl, className = "" }: { themeIdx: numbe
         );
     }
 
-    const t = BANNER_THEMES[themeIdx] ?? BANNER_THEMES[0];
     return (
-        <div className={`relative overflow-hidden ${t.dir} ${t.gradient} ${className}`}>
-            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 110" preserveAspectRatio="none">
-                <path d="M -20 90 Q 90 40 200 75 T 420 60 V 130 H -20 Z" fill="white" opacity="0.07" />
-                <path d="M -20 105 Q 130 65 260 95 T 420 85 V 130 H -20 Z" fill="white" opacity="0.05" />
-                <circle cx="345" cy="18" r="46" fill="white" opacity="0.06" />
-                <circle cx="370" cy="22" r="20" fill="white" opacity="0.08" />
-            </svg>
-            <div className="absolute inset-0 opacity-[0.07] mix-blend-overlay" style={{ backgroundImage: `url("${HATCH}")` }} />
-            <div className="absolute inset-0 bg-gradient-to-b from-black/0 via-black/0 to-black/20" />
-        </div>
-    );
-};
-
-/* ─── Live Profile Preview (mirrors screenshot layout) ───────────────── */
-const LivePreviewCard = ({ data, profileImagePreview, bannerImagePreview }: { data: ProfileData; profileImagePreview?: string; bannerImagePreview?: string }) => {
-    const fullName = [data.firstName, data.lastName].filter(Boolean).join(" ") || "Your Name";
-    const initials = [data.firstName?.[0], data.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "?";
-    const rating = Number(data.averageRating) || 0;
-    const filledStars = Math.round(rating);
-
-    return (
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm text-left">
-            {/* Banner */}
-            <div className="relative">
-                <BannerPreview themeIdx={data.bannerGradient} imageUrl={bannerImagePreview} className="h-24 sm:h-28 w-full" />
-                <div className="absolute bottom-0 left-5 translate-y-1/2">
-                    <div className="relative w-14 h-14 rounded-xl bg-green-950 ring-4 ring-white flex items-center justify-center text-white font-bold text-base overflow-hidden">
-                        {profileImagePreview ? (
-                            <img src={profileImagePreview} alt="Profile" className="w-full h-full object-cover" />
-                        ) : (
-                            initials
-                        )}
-                        {data.isVerified && (
-                            <div className="absolute -top-1 -right-1 w-5 h-5 bg-green-600 rounded-full border-2 border-white flex items-center justify-center">
-                                <FiCheckCircle size={9} className="text-white" />
-                            </div>
-                        )}
-                    </div>
-                </div>
-                <div className="absolute bottom-3 right-4">
-                    <div className="w-7 h-7 bg-white/90 rounded-full flex items-center justify-center">
-                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><line x1="4" y1="22" x2="4" y2="15" /></svg>
-                    </div>
-                </div>
-            </div>
-
-            {/* Info */}
-            <div className="px-5 pt-10 pb-5">
-                <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-base font-extrabold text-gray-900 leading-tight">{fullName}</h3>
-                    {!data.isVerified && (
-                        <span className="px-2 py-0.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-full text-[10px] font-semibold capitalize">
-                            {data.verificationStatus || "pending"}
-                        </span>
-                    )}
-                </div>
-                {data.title && <p className="text-xs text-gray-500 mt-0.5">{data.title}</p>}
-
-                {/* Stars */}
-                <div className="flex items-center gap-1 mt-2 flex-wrap">
-                    {[1, 2, 3, 4, 5].map(i => (
-                        <FiStar key={i} size={10} className={i <= filledStars ? "text-amber-400 fill-amber-400" : "text-gray-200 fill-gray-200"} />
-                    ))}
-                    <span className="text-xs font-bold text-gray-800 ml-1">{rating.toFixed(1)}</span>
-                    <span className="text-xs text-gray-500">({data.totalSessions} session{data.totalSessions === 1 ? "" : "s"})</span>
-                </div>
-
-                {/* Meta row */}
-                <div className="flex flex-wrap items-center gap-3 mt-2">
-                    {data.location && (
-                        <span className="flex items-center gap-1 text-[11px] text-gray-500">
-                            <FiMapPin size={10} /> {data.location}
-                        </span>
-                    )}
-                    {data.language && (
-                        <span className="flex items-center gap-1 text-[11px] text-gray-500">
-                            <FiGlobe size={10} /> {data.language}
-                        </span>
-                    )}
-                    {data.responseTime && (
-                        <span className="flex items-center gap-1 text-[11px] text-gray-500">
-                            <FiClock size={10} /> Responds {data.responseTime}
-                        </span>
-                    )}
-                </div>
-
-                {/* Session badges */}
-                <div className="flex gap-1.5 mt-3 flex-wrap">
-                    {data.sessionMode !== "onsite" && (
-                        <span className="px-2.5 py-0.5 border border-green-400 text-green-700 rounded-full text-[10px] font-semibold">Online</span>
-                    )}
-                    {data.sessionMode !== "online" && (
-                        <span className="px-2.5 py-0.5 border border-orange-400 text-orange-700 rounded-full text-[10px] font-semibold bg-orange-50">Onsite</span>
-                    )}
-                    {data.hourlyRate && (
-                        <span className="px-2.5 py-0.5 border border-gray-300 text-gray-600 rounded-full text-[10px] font-semibold">${data.hourlyRate}/hr</span>
-                    )}
-                </div>
-
-                {/* Message button */}
-                <button className="w-full mt-4 py-2.5 bg-green-800 text-white rounded-full text-xs font-semibold flex items-center justify-center gap-1.5">
-                    <FiMessageCircle size={12} /> Message {data.firstName || "Tutor"}
-                </button>
-            </div>
+        <div className={`relative overflow-hidden bg-gray-200 flex items-center justify-center ${className}`}>
+            <FiImage size={28} className="text-gray-400" />
         </div>
     );
 };
@@ -292,6 +226,42 @@ const InfoRow = ({ icon: Icon, label, value }: { icon: any; label: string; value
     );
 };
 
+/* ─── Format a 24hr "HH:MM" time string for friendly display ─────────── */
+const formatTimeDisplay = (time: string) => {
+    if (!time) return "";
+    const [hStr, mStr] = time.split(":");
+    let h = parseInt(hStr, 10);
+    const period = h >= 12 ? "PM" : "AM";
+    h = h % 12 || 12;
+    return `${h}:${mStr} ${period}`;
+};
+
+const AvailabilitySummary = ({ availability }: { availability: DayAvailability[] }) => {
+    const activeDays = availability.filter(d => d.enabled && d.slots.length > 0);
+    if (activeDays.length === 0) {
+        return <p className="text-xs text-gray-400 italic">No availability set yet</p>;
+    }
+    return (
+        <div className="flex flex-col gap-2.5">
+            {activeDays.map(d => {
+                const meta = DAYS_OF_WEEK.find(x => x.key === d.day)!;
+                return (
+                    <div key={d.day} className="flex items-start gap-3">
+                        <span className="text-xs font-bold text-gray-800 w-20 shrink-0">{meta.label}</span>
+                        <div className="flex flex-wrap gap-1.5">
+                            {d.slots.map(s => (
+                                <span key={s.id} className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-full text-[11px] font-semibold">
+                                    {formatTimeDisplay(s.startTime)} – {formatTimeDisplay(s.endTime)}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
 const ProfileView = ({
     data, profileImagePreview, bannerImagePreview, onEdit, onViewVerification,
 }: {
@@ -326,7 +296,7 @@ const ProfileView = ({
             {/* Header card */}
             <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm mb-6">
                 <div className="relative">
-                    <BannerPreview themeIdx={data.bannerGradient} imageUrl={bannerImagePreview} className="h-32 sm:h-40 w-full" />
+                    <BannerPreview imageUrl={bannerImagePreview} className="h-32 sm:h-40 w-full" />
                     <div className="absolute bottom-0 left-5 sm:left-8 translate-y-1/2">
                         <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-green-950 ring-4 ring-white flex items-center justify-center text-white font-bold text-2xl overflow-hidden">
                             {profileImagePreview ? (
@@ -436,6 +406,12 @@ const ProfileView = ({
                 )}
             </div>
 
+            {/* Availability */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 mb-6">
+                <SectionTitle icon={FiClock}>Weekly availability</SectionTitle>
+                <AvailabilitySummary availability={data.availability} />
+            </div>
+
             {/* Experience + Education */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
                 <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6">
@@ -473,34 +449,20 @@ const ProfileView = ({
             {/* Payout */}
             <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 mb-10">
                 <SectionTitle icon={FiCreditCard}>Payout method</SectionTitle>
-                {data.payoutMethod === "bank_transfer" ? (
-                    data.bankName || data.accountNumber ? (
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-green-700 flex items-center justify-center shrink-0">
-                                <FiCreditCard size={16} className="text-white" />
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-sm font-bold text-gray-900 truncate">
-                                    {data.bankName || "Bank account"} {data.accountNumber ? `••••${data.accountNumber.slice(-4)}` : ""}
-                                </p>
-                                {data.accountName && <p className="text-xs text-gray-500 truncate">{data.accountName}</p>}
-                            </div>
-                        </div>
-                    ) : (
-                        <p className="text-xs text-gray-400 italic">No bank account added yet</p>
-                    )
-                ) : data.paypalEmail ? (
+                {data.bankName || data.accountNumber ? (
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-green-700 flex items-center justify-center shrink-0">
-                            <FiGlobe size={16} className="text-white" />
+                            <FiCreditCard size={16} className="text-white" />
                         </div>
-                        <div>
-                            <p className="text-sm font-bold text-gray-900">PayPal</p>
-                            <p className="text-xs text-gray-500">{data.paypalEmail}</p>
+                        <div className="min-w-0">
+                            <p className="text-sm font-bold text-gray-900 truncate">
+                                {data.bankName || "Bank account"} {data.accountNumber ? `••••${data.accountNumber.slice(-4)}` : ""}
+                            </p>
+                            {data.accountName && <p className="text-xs text-gray-500 truncate">{data.accountName}</p>}
                         </div>
                     </div>
                 ) : (
-                    <p className="text-xs text-gray-400 italic">No PayPal email added yet</p>
+                    <p className="text-xs text-gray-400 italic">No bank account added yet</p>
                 )}
             </div>
         </div>
@@ -508,9 +470,9 @@ const ProfileView = ({
 };
 
 /* ─── Reusable input styles ──────────────────────────────────────────── */
-const fieldCls = "flex items-center gap-3 border border-gray-200 rounded-xl px-4 py-3 focus-within:border-green-500 focus-within:ring-2 focus-within:ring-green-100 transition-all bg-white";
+const fieldCls = "flex items-center gap-3 border border-gray-200 rounded-lg px-4 py-3 focus-within:border-green-500 focus-within:ring-2 focus-within:ring-green-100 transition-all bg-white";
 const inpCls = "flex-1 min-w-0 border-none outline-none text-sm text-gray-800 placeholder-gray-400 bg-transparent";
-const baseCls = "w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all bg-white";
+const baseCls = "w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-green-800  transition-all bg-white";
 
 const Label = ({ children }: { children: React.ReactNode }) => (
     <label className="block text-sm font-semibold text-gray-800 mb-2">{children}</label>
@@ -600,7 +562,7 @@ const Step1 = ({
     return (
         <div className="space-y-7">
             <div>
-                <p className="text-xs font-bold text-green-700 uppercase tracking-widest mb-1">Step 1 of 3</p>
+                <p className="text-xs font-bold text-green-700 uppercase tracking-widest mb-1">Step 1 of 4</p>
                 <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 mb-1">Basic Details</h2>
                 <p className="text-sm text-gray-500">Your public profile information. Tutors with detailed profiles book 3× more sessions.</p>
             </div>
@@ -609,7 +571,7 @@ const Step1 = ({
             <div>
                 <Label>Profile banner</Label>
                 <div className="relative h-24 sm:h-28 rounded-2xl overflow-hidden border border-gray-200">
-                    <BannerPreview themeIdx={data.bannerGradient} imageUrl={bannerImagePreview} className="w-full h-full" />
+                    <BannerPreview imageUrl={bannerImagePreview} className="w-full h-full" />
                     <button
                         type="button"
                         disabled={disabled}
@@ -638,7 +600,7 @@ const Step1 = ({
                         onChange={handleBannerFile}
                     />
                 </div>
-                <p className="text-xs text-gray-400 mt-1.5">Upload a custom banner, or pick one of the preset themes above</p>
+                <p className="text-xs text-gray-400 mt-1.5">Upload a custom banner image to personalise your profile</p>
             </div>
 
             {/* Profile photo */}
@@ -822,7 +784,7 @@ interface MiniFormProps {
 }
 
 const MiniForm = ({ title, onClose, onAdd, disabled, children }: MiniFormProps) => (
-    <div className="mt-3 p-4 sm:p-5 bg-green-50 rounded-2xl border border-green-100">
+    <div className="mt-1 p-4 sm:p-5 bg-white rounded-2xl">
         <div className="flex items-center justify-between mb-4">
             <p className="text-sm font-bold text-gray-900">{title}</p>
             <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 rounded-lg transition-all"><FiX size={15} /></button>
@@ -834,6 +796,170 @@ const MiniForm = ({ title, onClose, onAdd, disabled, children }: MiniFormProps) 
         </button>
     </div>
 );
+
+const emptyTimeSlot = (id: number): TimeSlot => ({ id, startTime: "09:00", endTime: "10:00", isBooked: false });
+
+const AvailabilitySection = ({
+    data, setData, disabled,
+}: { data: ProfileData; setData: (d: ProfileData) => void; disabled?: boolean }) => {
+
+    const updateDay = (dayKey: string, updater: (d: DayAvailability) => DayAvailability) => {
+        setData({
+            ...data,
+            availability: data.availability.map(d => d.day === dayKey ? updater(d) : d),
+        });
+    };
+
+    const toggleDay = (dayKey: string) => {
+        updateDay(dayKey, d => {
+            const enabling = !d.enabled;
+            return {
+                ...d,
+                enabled: enabling,
+                // seed a first slot when switching a day on for the first time
+                slots: enabling && d.slots.length === 0 ? [emptyTimeSlot(1)] : d.slots,
+            };
+        });
+    };
+
+    const addSlot = (dayKey: string) => {
+        updateDay(dayKey, d => {
+            if (d.slots.length >= MAX_SLOTS_PER_DAY) return d;
+            const nextId = d.slots.length ? Math.max(...d.slots.map(s => s.id)) + 1 : 1;
+            return { ...d, slots: [...d.slots, emptyTimeSlot(nextId)] };
+        });
+    };
+
+    const removeSlot = (dayKey: string, slotId: number) => {
+        updateDay(dayKey, d => ({ ...d, slots: d.slots.filter(s => s.id !== slotId) }));
+    };
+
+    const updateSlot = (dayKey: string, slotId: number, field: "startTime" | "endTime", value: string) => {
+        updateDay(dayKey, d => ({
+            ...d,
+            slots: d.slots.map(s => s.id === slotId ? { ...s, [field]: value } : s),
+        }));
+    };
+
+    const applyToAllDays = (dayKey: string) => {
+        const source = data.availability.find(d => d.day === dayKey);
+        if (!source || source.slots.length === 0) return;
+        setData({
+            ...data,
+            availability: data.availability.map(d => ({
+                ...d,
+                enabled: true,
+                slots: source.slots.map((s, idx) => ({ ...s, id: idx + 1 })),
+            })),
+        });
+    };
+
+    return (
+        <div className="bg-gray-50 rounded-2xl border border-gray-200 p-4 sm:p-5">
+            <SectionTitle icon={FiClock}>Weekly availability</SectionTitle>
+            <p className="text-xs text-gray-500 mb-4">
+                Turn on the days you're available and add up to {MAX_SLOTS_PER_DAY} time slots per day.
+            </p>
+
+            <div className="flex flex-col gap-2.5">
+                {data.availability.map(dayAv => {
+                    const dayMeta = DAYS_OF_WEEK.find(d => d.key === dayAv.day)!;
+                    const atMax = dayAv.slots.length >= MAX_SLOTS_PER_DAY;
+
+                    return (
+                        <div
+                            key={dayAv.day}
+                            className={`rounded-xl border p-3.5 transition-all ${dayAv.enabled ? "bg-white border-gray-200" : "bg-gray-100/60 border-gray-200"}`}
+                        >
+                            {/* Day header row */}
+                            <div className="flex items-center justify-between gap-3 flex-wrap">
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        type="button"
+                                        disabled={disabled}
+                                        onClick={() => toggleDay(dayAv.day)}
+                                        className={`relative w-9 h-5 rounded-full transition-all shrink-0 ${dayAv.enabled ? "bg-green-700" : "bg-gray-300"}`}
+                                    >
+                                        <span
+                                            className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${dayAv.enabled ? "left-4" : "left-0.5"}`}
+                                        />
+                                    </button>
+                                    <span className={`text-sm font-bold ${dayAv.enabled ? "text-gray-900" : "text-gray-400"}`}>
+                                        {dayMeta.label}
+                                    </span>
+                                    {!dayAv.enabled && (
+                                        <span className="text-xs text-gray-400 italic">Unavailable</span>
+                                    )}
+                                </div>
+
+                                {dayAv.enabled && (
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            type="button"
+                                            disabled={disabled}
+                                            onClick={() => applyToAllDays(dayAv.day)}
+                                            className="text-[11px] font-semibold text-gray-400 hover:text-green-700 transition-colors"
+                                        >
+                                            Copy to all days
+                                        </button>
+                                        <button
+                                            type="button"
+                                            disabled={disabled || atMax}
+                                            onClick={() => addSlot(dayAv.day)}
+                                            className="flex items-center gap-1 text-xs font-semibold text-green-700 hover:text-green-800 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                                        >
+                                            <FiPlus size={12} /> Add slot
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Time slots */}
+                            {dayAv.enabled && (
+                                <div className="mt-3 flex flex-col gap-2">
+                                    {dayAv.slots.map(slot => (
+                                        <div key={slot.id} className="flex items-center gap-2">
+                                            <input
+                                                type="time"
+                                                disabled={disabled || !!slot.isBooked}
+                                                value={slot.startTime}
+                                                onChange={e => updateSlot(dayAv.day, slot.id, "startTime", e.target.value)}
+                                                className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2.5 py-2 text-xs text-gray-700 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all disabled:opacity-60"
+                                            />
+                                            <span className="text-xs text-gray-400 shrink-0">to</span>
+                                            <input
+                                                type="time"
+                                                disabled={disabled || !!slot.isBooked}
+                                                value={slot.endTime}
+                                                onChange={e => updateSlot(dayAv.day, slot.id, "endTime", e.target.value)}
+                                                className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2.5 py-2 text-xs text-gray-700 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all disabled:opacity-60"
+                                            />
+                                            {slot.isBooked ? (
+                                                <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-1 shrink-0">Booked</span>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    disabled={disabled}
+                                                    onClick={() => removeSlot(dayAv.day, slot.id)}
+                                                    className="p-1.5 text-gray-300 hover:text-red-400 transition-colors shrink-0"
+                                                >
+                                                    <FiTrash2 size={13} />
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                    {atMax && (
+                                        <p className="text-[11px] text-gray-400 italic">Maximum {MAX_SLOTS_PER_DAY} slots reached for this day</p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
 
 /* ─── Step 2: Teaching Setup ─────────────────────────────────────────── */
 const Step2 = ({ data, setData, disabled }: { data: ProfileData; setData: (d: ProfileData) => void; disabled?: boolean }) => {
@@ -874,7 +1000,7 @@ const Step2 = ({ data, setData, disabled }: { data: ProfileData; setData: (d: Pr
     return (
         <div className="space-y-8">
             <div>
-                <p className="text-xs font-bold text-green-700 uppercase tracking-widest mb-1">Step 2 of 3</p>
+                <p className="text-xs font-bold text-green-700 uppercase tracking-widest mb-1">Step 2 of 4</p>
                 <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 mb-1">Teaching Setup</h2>
                 <p className="text-sm text-gray-500">Your teaching mode, subjects, rate, experience, and education.</p>
             </div>
@@ -1039,183 +1165,83 @@ const Step2 = ({ data, setData, disabled }: { data: ProfileData; setData: (d: Pr
     );
 };
 
-/* ─── Step 3: Banking Info ───────────────────────────────────────────── */
-const Step3 = ({ data, setData }: { data: ProfileData; setData: (d: ProfileData) => void }) => {
-    const [showNumber, setShowNumber] = useState(false);
+/* ─── Step 3: Availability (its own dedicated step/page) ─────────────── */
+const Step3Availability = ({ data, setData, disabled }: { data: ProfileData; setData: (d: ProfileData) => void; disabled?: boolean }) => (
+    <div className="space-y-7">
+        <div>
+            <p className="text-xs font-bold text-green-700 uppercase tracking-widest mb-1">Step 3 of 4</p>
+            <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 mb-1">Availability</h2>
+            <p className="text-sm text-gray-500">Set the days and time slots when students can book sessions with you.</p>
+        </div>
+        <AvailabilitySection data={data} setData={setData} disabled={disabled} />
+    </div>
+);
 
-    const isBankMethod = data.payoutMethod === "bank_transfer";
-    const isBankFilled = !!(data.bankName && data.accountNumber);
+/* ─── Step 4: Banking Info ───────────────────────────────────────────── */
+const Step4 = ({ data, setData }: { data: ProfileData; setData: (d: ProfileData) => void }) => {
+    const [showNumber, setShowNumber] = useState(false);
 
     return (
         <div className="space-y-7">
             <div>
-                <p className="text-xs font-bold text-green-700 uppercase tracking-widest mb-1">Step 3 of 3</p>
+                <p className="text-xs font-bold text-green-700 uppercase tracking-widest mb-1">Step 4 of 4</p>
                 <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 mb-1">Banking Info</h2>
                 <p className="text-sm text-gray-500">Where should we send your earnings? All details are encrypted and never visible to students.</p>
             </div>
 
-            {/* Security notice */}
-            <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-2xl">
-                <FiShield size={16} className="text-amber-600 shrink-0 mt-0.5" />
+            <div className="space-y-5">
+
                 <div>
-                    <p className="text-xs font-bold text-amber-800 mb-0.5">Your data is secure</p>
-                    <p className="text-xs text-amber-700 leading-relaxed">
-                        Banking details are stored with 256-bit AES encryption. WeLearnGlobal never shares your financial information with students or third parties.
+                    <label className="block text-sm font-semibold text-gray-800 mb-2">Account holder name <span className="text-gray-400 font-normal">(optional, for your reference)</span></label>
+                    <div className={fieldCls}>
+                        <FiUser size={15} className="text-gray-400 shrink-0" />
+                        <input className={inpCls} placeholder="Full legal name as it appears on your bank account"
+                            value={data.accountName}
+                            type="text"
+                            onChange={e => setData({ ...data, accountName: e.target.value })} />
+                    </div>
+                </div>
+
+                {/* Bank name */}
+                <div>
+                    <label className="block text-sm font-semibold text-gray-800 mb-2">Bank name</label>
+                    <div className={fieldCls}>
+                        <FiCreditCard size={15} className="text-gray-400 shrink-0" />
+                        <input className={inpCls} placeholder="e.g. Chase, Barclays"
+                            value={data.bankName}
+                            type="text"
+                            onChange={e => setData({ ...data, bankName: e.target.value })} />
+                    </div>
+                </div>
+
+                {/* Account number */}
+                <div>
+                    <label className="block text-sm font-semibold text-gray-800 mb-2">Account number</label>
+                    <div className={fieldCls}>
+                        <FiLock size={15} className="text-gray-400 shrink-0" />
+                        <input
+                            type={showNumber ? "text" : "password"}
+                            // inputMode="numeric"
+                            className={inpCls}
+                            placeholder="Enter your account number"
+                            value={data.accountNumber}
+                            onChange={e => setData({ ...data, accountNumber: e.target.value.replace(/\D/g, "") })}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowNumber(v => !v)}
+                            className="text-gray-400 hover:text-gray-600 transition-colors bg-transparent border-none cursor-pointer p-0 shrink-0"
+                        >
+                            {showNumber
+                                ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
+                                : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+                            }
+                        </button>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
+                        <FiLock size={10} /> Masked for your security · numbers only
                     </p>
                 </div>
-            </div>
-
-            {/* Payout method toggle */}
-            <div>
-                <label className="block text-sm font-semibold text-gray-800 mb-3">Payout method</label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {([
-                        { key: "bank_transfer", icon: FiCreditCard, label: "Bank Transfer", sub: "Direct to your account" },
-                        { key: "paypal", icon: FiGlobe, label: "PayPal", sub: "Instant payout option" },
-                    ] as { key: PayoutMethod; icon: any; label: string; sub: string }[]).map(({ key, icon: Icon, label, sub }) => (
-                        <button
-                            key={key}
-                            onClick={() => setData({ ...data, payoutMethod: key })}
-                            className={`flex items-center gap-3 p-4 rounded-2xl border-2 text-left transition-all ${data.payoutMethod === key
-                                ? "border-green-700 bg-green-50"
-                                : "border-gray-200 bg-white hover:border-green-200 hover:bg-green-50/50"}`}
-                        >
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${data.payoutMethod === key ? "bg-green-700" : "bg-gray-100"}`}>
-                                <Icon size={18} className={data.payoutMethod === key ? "text-white" : "text-gray-500"} />
-                            </div>
-                            <div className="min-w-0">
-                                <p className={`text-sm font-bold leading-none ${data.payoutMethod === key ? "text-green-800" : "text-gray-700"}`}>{label}</p>
-                                <p className="text-[11px] text-gray-400 mt-0.5">{sub}</p>
-                            </div>
-                            {data.payoutMethod === key && (
-                                <FiCheckCircle size={16} className="text-green-700 ml-auto shrink-0" />
-                            )}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Bank transfer form — matches the API payload exactly:
-                { method: "bank_transfer", bank_name, account_number } */}
-            {isBankMethod && (
-                <div className="space-y-5">
-                    {/* Account holder name — kept for the tutor's own reference/display only,
-                        not part of the payment_info payload the backend expects. */}
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-800 mb-2">Account holder name <span className="text-gray-400 font-normal">(optional, for your reference)</span></label>
-                        <div className={fieldCls}>
-                            <FiUser size={15} className="text-gray-400 shrink-0" />
-                            <input className={inpCls} placeholder="Full legal name as it appears on your bank account"
-                                value={data.accountName}
-                                onChange={e => setData({ ...data, accountName: e.target.value })} />
-                        </div>
-                    </div>
-
-                    {/* Bank name */}
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-800 mb-2">Bank name</label>
-                        <div className={fieldCls}>
-                            <FiCreditCard size={15} className="text-gray-400 shrink-0" />
-                            <input className={inpCls} placeholder="e.g. Chase, Barclays"
-                                value={data.bankName}
-                                onChange={e => setData({ ...data, bankName: e.target.value })} />
-                        </div>
-                    </div>
-
-                    {/* Account number */}
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-800 mb-2">Account number</label>
-                        <div className={fieldCls}>
-                            <FiLock size={15} className="text-gray-400 shrink-0" />
-                            <input
-                                type={showNumber ? "text" : "password"}
-                                inputMode="numeric"
-                                className={inpCls}
-                                placeholder="Enter your account number"
-                                value={data.accountNumber}
-                                onChange={e => setData({ ...data, accountNumber: e.target.value.replace(/\D/g, "") })}
-                            />
-                            <button
-                                type="button"
-                                onClick={() => setShowNumber(v => !v)}
-                                className="text-gray-400 hover:text-gray-600 transition-colors bg-transparent border-none cursor-pointer p-0 shrink-0"
-                            >
-                                {showNumber
-                                    ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
-                                    : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                                }
-                            </button>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
-                            <FiLock size={10} /> Masked for your security · numbers only
-                        </p>
-                    </div>
-
-                    {/* Saved account confirmation */}
-                    {isBankFilled && (
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-green-50 border border-green-200 rounded-2xl">
-                            <div className="flex items-center gap-3 min-w-0">
-                                <div className="w-10 h-10 rounded-xl bg-green-700 flex items-center justify-center shrink-0">
-                                    <FiCreditCard size={16} className="text-white" />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-sm font-bold text-gray-900 truncate">
-                                        {data.bankName} ••••{data.accountNumber.slice(-4)}
-                                    </p>
-                                    {data.accountName && <p className="text-xs text-gray-500 truncate">{data.accountName}</p>}
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                                <FiCheckCircle size={15} className="text-green-700" />
-                                <span className="text-xs font-semibold text-green-700">Primary</span>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* PayPal form */}
-            {!isBankMethod && (
-                <div>
-                    <label className="block text-sm font-semibold text-gray-800 mb-2">PayPal email address</label>
-                    <div className={fieldCls}>
-                        <FiGlobe size={15} className="text-gray-400 shrink-0" />
-                        <input
-                            type="email"
-                            className={inpCls}
-                            placeholder="paypal@example.com"
-                            value={data.paypalEmail}
-                            onChange={e => setData({ ...data, paypalEmail: e.target.value })}
-                        />
-                    </div>
-                    {data.paypalEmail && (
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-4 p-4 bg-green-50 border border-green-200 rounded-2xl">
-                            <div className="flex items-center gap-3 min-w-0">
-                                <div className="w-10 h-10 rounded-xl bg-green-700 flex items-center justify-center shrink-0">
-                                    <FiGlobe size={16} className="text-white" />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-sm font-bold text-gray-900">PayPal</p>
-                                    <p className="text-xs text-gray-500 truncate">{data.paypalEmail}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                                <FiCheckCircle size={15} className="text-green-700" />
-                                <span className="text-xs font-semibold text-green-700">Connected</span>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* Payout schedule info */}
-            <div className="bg-green-950 rounded-2xl p-5 text-white">
-                <div className="flex items-center gap-2 mb-3">
-                    <FiClock size={14} className="text-green-300" />
-                    <p className="text-xs font-bold text-green-300 uppercase tracking-widest">Payout schedule</p>
-                </div>
-                <p className="text-sm font-semibold text-white mb-1">Weekly on Fridays</p>
-                <p className="text-xs text-green-200 leading-relaxed">Earnings from confirmed sessions are released 48 hours after completion and paid out every Friday. Minimum payout threshold is $20.</p>
             </div>
         </div>
     );
@@ -1246,18 +1272,74 @@ function normalizeSkills(value: unknown): string[] {
     return [];
 }
 
+// Trims a "HH:MM:SS" (or already-short "HH:MM") time string down to "HH:MM"
+// for use in <input type="time">.
+const toShortTime = (t: unknown, fallback: string) =>
+    typeof t === "string" && t.length >= 5 ? t.slice(0, 5) : fallback;
+
+function normalizeAvailability(value: unknown): DayAvailability[] {
+    let arr: any[] = [];
+    if (Array.isArray(value)) {
+        arr = value;
+    } else if (typeof value === "string" && value.trim()) {
+        try {
+            const parsed = JSON.parse(value);
+            arr = Array.isArray(parsed) ? parsed : [];
+        } catch {
+            arr = [];
+        }
+    }
+
+    if (arr.length === 0) return defaultAvailability;
+
+    // Flat API format: entries look like { day_of_week, start_time, end_time, is_booked }
+    if (typeof arr[0]?.day_of_week === "number" || typeof arr[0]?.day_of_week === "string") {
+        const grouped: Record<string, TimeSlot[]> = {};
+        arr.forEach((item: any) => {
+            const dayKey = normalizeDayKey(item?.day_of_week ?? item?.day ?? item?.day_name);
+            if (!dayKey) return;
+            if (!grouped[dayKey]) grouped[dayKey] = [];
+            if (grouped[dayKey].length >= MAX_SLOTS_PER_DAY) return;
+            grouped[dayKey].push({
+                id: grouped[dayKey].length + 1,
+                startTime: toShortTime(item?.start_time ?? item?.startTime, "09:00"),
+                endTime: toShortTime(item?.end_time ?? item?.endTime, "10:00"),
+                isBooked: !!(item?.is_booked ?? item?.is_booked === false),
+            });
+        });
+        return DAYS_OF_WEEK.map(d => {
+            const slots = grouped[d.key] || [];
+            return { day: d.key, enabled: slots.length > 0, slots };
+        });
+    }
+
+    // Legacy nested format: entries look like { day, enabled, slots: [...] }
+    return DAYS_OF_WEEK.map(d => {
+        const found = arr.find((a: any) => a?.day === d.key);
+        if (!found) return { day: d.key, enabled: false, slots: [] };
+        const slots: TimeSlot[] = Array.isArray(found.slots)
+            ? found.slots.slice(0, MAX_SLOTS_PER_DAY).map((s: any, idx: number) => ({
+                id: typeof s?.id === "number" ? s.id : idx + 1,
+                startTime: toShortTime(s?.startTime, "09:00"),
+                endTime: toShortTime(s?.endTime, "10:00"),
+                isBooked: !!s?.isBooked,
+            }))
+            : [];
+        return { day: d.key, enabled: !!found.enabled && slots.length > 0, slots };
+    });
+}
+
 const emptyProfileData: ProfileData = {
     firstName: "", lastName: "", email: "",
     title: "",
     phone: "", bio: "", skills: [],
     location: "", language: "",
-    responseTime: "< 2 hours", sessionMode: "both", bannerGradient: 0,
+    responseTime: "< 2 hours", sessionMode: "both",
     experience: [],
     education: [],
     subjects: [], hourlyRate: "",
-    payoutMethod: "bank_transfer",
+    availability: defaultAvailability,
     accountName: "", bankName: "", accountNumber: "",
-    routingNumber: "", accountType: "checking", paypalEmail: "",
     averageRating: "0.00", totalSessions: 0,
     isVerified: false, verificationStatus: "pending",
 };
@@ -1270,11 +1352,8 @@ const TutorProfile = () => {
     const [step, setStep] = useState<Step>(1);
     const [successMessage, setSuccessMessage] = useState("");
     const [errorMessage, setErrorMessage] = useState("");
-    const [showVerificationModal, setShowVerificationModal] = useState(false);
-
     const [data, setData] = useState<ProfileData>(emptyProfileData);
 
-    // Actual File objects to upload, kept separate from the preview URLs shown in the UI.
     const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
     const [profileImagePreview, setProfileImagePreview] = useState<string>("");
     const [bannerImageFile, setBannerImageFile] = useState<File | null>(null);
@@ -1285,20 +1364,16 @@ const TutorProfile = () => {
 
     const { tutorProfile, isLoading: isTutorLoading } = useGetTutorProfile();
     const tutor = tutorProfile?.data;
-    const hasProfile = !!tutor;
 
-    // Creating uses one hook, updating an existing profile uses another —
-    // pick whichever applies at save time.
+    console.log("TutorProfile: tutor", tutor);
+
+    const hasProfile = !!tutor;
     const { mutate: createTutorProfile, isPending: isCreating } = useCreateTutorProfile();
     const { mutate: updateTutorProfile, isPending: isUpdating } = useUpdateTutorProfile();
     const isPending = isCreating || isUpdating;
 
     const isLoading = isUserLoading || isTutorLoading;
 
-    // Decide the initial page mode exactly once, after the tutor profile has
-    // finished loading: no profile -> empty state, existing profile -> view.
-    // Done only once so it doesn't fight with the user's own mode changes
-    // (e.g. clicking "Update Profile") on subsequent re-renders/refetches.
     useEffect(() => {
         if (!isTutorLoading && !modeInitialized.current) {
             modeInitialized.current = true;
@@ -1350,6 +1425,8 @@ const TutorProfile = () => {
             ? (() => { try { return JSON.parse(tutor.payment_info); } catch { return {}; } })()
             : (tutor.payment_info || {});
 
+        const availabilitySource = tutor.availability_slots ?? tutor.availability;
+
         setData(prev => ({
             ...prev,
             title: tutor.professional_title ?? prev.title,
@@ -1365,69 +1442,64 @@ const TutorProfile = () => {
             hourlyRate: tutor.hourly_rate !== undefined && tutor.hourly_rate !== null
                 ? String(Number(tutor.hourly_rate) || "")
                 : prev.hourlyRate,
-            payoutMethod: (paymentInfo.method as PayoutMethod) ?? prev.payoutMethod,
+            availability: availabilitySource !== undefined
+                ? normalizeAvailability(availabilitySource)
+                : prev.availability,
             accountName: paymentInfo.account_holder_name ?? prev.accountName,
             bankName: paymentInfo.bank_name ?? prev.bankName,
             accountNumber: paymentInfo.account_number ?? prev.accountNumber,
-            paypalEmail: paymentInfo.paypal_email ?? prev.paypalEmail,
             averageRating: tutor.average_rating ?? prev.averageRating,
             totalSessions: typeof tutor.total_sessions === "number" ? tutor.total_sessions : prev.totalSessions,
             isVerified: typeof tutor.is_verified === "boolean" ? tutor.is_verified : prev.isVerified,
             verificationStatus: tutor.verification_status ?? prev.verificationStatus,
         }));
 
-        // banner/profile_image now come back as real uploaded file URLs, not theme labels
+        // banner/profile_image now come back as real uploaded file URLs
         if (tutor.banner) setBannerImagePreview(tutor.banner);
         if (tutor.profile_image) setProfileImagePreview(prev => prev || tutor.profile_image);
     }, [tutor]);
 
     const isStep1Done = !!(data.title);
     const isStep2Done = data.subjects.length > 0 && !!data.hourlyRate;
-    const isStep3Done = data.payoutMethod === "bank_transfer"
-        ? !!(data.bankName && data.accountNumber)
-        : !!data.paypalEmail;
-    const pct = Math.round([isStep1Done, isStep2Done, isStep3Done].filter(Boolean).length / 3 * 100);
+    const isStep3Done = data.availability.some(d => d.enabled && d.slots.length > 0);
+    const isStep4Done = !!(data.bankName && data.accountNumber);
+    const pct = Math.round([isStep1Done, isStep2Done, isStep3Done, isStep4Done].filter(Boolean).length / 4 * 100);
+
+    // Build the availability payload in the backend's expected shape:
+    // [{ day_of_week: "Monday", start_time: "09:00:00", end_time: "11:00:00", is_booked: false }]
+    const buildAvailabilityPayload = () =>
+        data.availability
+            .filter(d => d.enabled)
+            .flatMap(d =>
+                d.slots.map(s => ({
+                    day_of_week: d.day.charAt(0).toUpperCase() + d.day.slice(1),
+                    start_time: `${s.startTime}:00`,
+                    end_time: `${s.endTime}:00`,
+                    is_booked: !!s.isBooked,
+                }))
+            );
 
     const buildPayload = () => {
-        // hourly_rate must be a valid number — never send "", "-", or anything non-numeric.
         const parsedRate = data.hourlyRate ? Number(data.hourlyRate) : NaN;
         const hourlyRate = Number.isFinite(parsedRate) ? parsedRate : 0;
 
-        // Matches the API's payment_info shape exactly:
-        // bank transfer -> { method, bank_name, account_number }
-        // paypal        -> { method, paypal_email }
-        const paymentInfo = data.payoutMethod === "paypal"
-            ? { method: "paypal", paypal_email: data.paypalEmail }
-            : {
-                method: "bank_transfer",
+        const availabilityPayload = buildAvailabilityPayload();
+        const payload = {
+            bio: data.bio,
+            hourly_rate: String(hourlyRate),
+            teaching_mode: data.sessionMode,
+            years_of_experience: data.experience.length,
+            payment_info: {
                 bank_name: data.bankName,
                 account_number: data.accountNumber,
-            };
+            },
+            availability: availabilityPayload,
+        };
 
-        const formData = new FormData();
-        formData.append("bio", data.bio);
-        formData.append("subjects", JSON.stringify(data.subjects));
-        formData.append("session_status", data.sessionMode);
-        formData.append("experience", JSON.stringify(data.experience.map(({ role, org, period }) => ({ role, org, period }))));
-        formData.append("education", JSON.stringify(data.education.map(({ degree, school, year }) => ({ degree, school, year }))));
-        formData.append("location", data.location);
-        formData.append("language", data.language);
-        formData.append("phone_number", data.phone);
-        formData.append("professional_title", data.title);
-        formData.append("payment_info", JSON.stringify(paymentInfo));
-        formData.append("hourly_rate", String(hourlyRate));
-        formData.append("skills", JSON.stringify(data.skills));
+        console.log("TutorProfile availability payload:", availabilityPayload);
+        console.log("TutorProfile payload:", payload);
 
-        // Only send these as actual files, and only when a new one was picked —
-        // omitting them on edit lets the backend keep the existing upload.
-        if (profileImageFile instanceof File) {
-            formData.append("profile_image", profileImageFile, profileImageFile.name);
-        }
-        if (bannerImageFile instanceof File) {
-            formData.append("banner", bannerImageFile, bannerImageFile.name);
-        }
-
-        return formData;
+        return payload;
     };
 
     const handleSave = () => {
@@ -1458,11 +1530,6 @@ const TutorProfile = () => {
         setMode("edit");
     };
 
-    const handleStartEdit = () => {
-        setStep(1);
-        setMode("edit");
-    };
-
     const handleCancelEdit = () => {
         setErrorMessage("");
         setMode(hasProfile ? "view" : "empty");
@@ -1481,37 +1548,6 @@ const TutorProfile = () => {
         return (
             <div className="md:pl-56 pb-20 md:pb-8 pt-20 bg-gray-50 min-h-screen">
                 <EmptyState onCreate={handleStartCreate} />
-            </div>
-        );
-    }
-
-    if (mode === "view") {
-        return (
-            <div className="md:pl-56 pb-20 md:pb-8 lg:pt-20 bg-gray-50 min-h-screen">
-                <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-                    {successMessage && (
-                        <div className="max-w-4xl mx-auto mb-6 bg-green-50 border border-green-200 rounded-2xl p-4 flex items-center gap-3">
-                            <div className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center shrink-0">
-                                <FiCheck className="text-white" size={12} />
-                            </div>
-                            <p className="text-sm font-semibold text-green-700">{successMessage}</p>
-                        </div>
-                    )}
-                    <ProfileView
-                        data={data}
-                        profileImagePreview={profileImagePreview}
-                        bannerImagePreview={bannerImagePreview}
-                        onEdit={handleStartEdit}
-                        onViewVerification={() => setShowVerificationModal(true)}
-                    />
-                </div>
-                {showVerificationModal && (
-                    <VerificationModal
-                        isVerified={data.isVerified}
-                        verificationStatus={data.verificationStatus}
-                        onClose={() => setShowVerificationModal(false)}
-                    />
-                )}
             </div>
         );
     }
@@ -1565,9 +1601,8 @@ const TutorProfile = () => {
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
-                    {/* ── Left sidebar ── */}
+                    {/* ── Left sidebar (step nav only — live preview removed) ── */}
                     <div className="lg:col-span-1 flex flex-col gap-5 lg:sticky lg:top-8 order-2 lg:order-1">
-                        {/* Step nav */}
                         <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5">
                             {/* Progress */}
                             <div className="flex items-center gap-3 mb-5">
@@ -1578,7 +1613,7 @@ const TutorProfile = () => {
                             </div>
 
                             {STEPS.map(s => {
-                                const done = s.id === 1 ? isStep1Done : s.id === 2 ? isStep2Done : isStep3Done;
+                                const done = s.id === 1 ? isStep1Done : s.id === 2 ? isStep2Done : s.id === 3 ? isStep3Done : isStep4Done;
                                 const active = step === s.id;
                                 return (
                                     <button key={s.id} onClick={() => setStep(s.id as Step)}
@@ -1594,13 +1629,6 @@ const TutorProfile = () => {
                                     </button>
                                 );
                             })}
-                        </div>
-
-                        {/* Live preview */}
-                        <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 px-1">Live preview</p>
-                            <LivePreviewCard data={data} profileImagePreview={profileImagePreview} bannerImagePreview={bannerImagePreview} />
-                            <p className="text-[10px] text-gray-400 text-center mt-2">This is how students see your card</p>
                         </div>
                     </div>
 
@@ -1620,7 +1648,8 @@ const TutorProfile = () => {
                                 />
                             )}
                             {step === 2 && <Step2 data={data} setData={setData} disabled={isPending} />}
-                            {step === 3 && <Step3 data={data} setData={setData} />}
+                            {step === 3 && <Step3Availability data={data} setData={setData} disabled={isPending} />}
+                            {step === 4 && <Step4 data={data} setData={setData} />}
 
                             {/* Nav footer */}
                             <div className="flex flex-wrap items-center justify-between gap-3 pt-6 mt-8 border-t border-gray-100">
@@ -1637,7 +1666,7 @@ const TutorProfile = () => {
                                     ))}
                                 </div>
 
-                                {step < 3 ? (
+                                {step < 4 ? (
                                     <button onClick={() => setStep(s => (s + 1) as Step)}
                                         className="flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-green-700 text-white rounded-full text-sm font-semibold hover:bg-green-800 transition-all order-2 sm:order-3">
                                         Continue <FiArrowRight size={14} />
