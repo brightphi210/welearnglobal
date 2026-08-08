@@ -54,7 +54,7 @@ const TutorMessages = () => {
   const location = useLocation() as { state?: { chatId?: number } };
   const currentUserId = useCurrentUserId();
 
-  const [selectedChat, setSelectedChat] = useState<number | null>(location.state?.chatId ?? null);
+  const [selectedChat, setSelectedChat] = useState<any>(location.state?.chatId ?? null);
   const [messageText, setMessageText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [liveMessages, setLiveMessages] = useState<ChatMessage[]>([]);

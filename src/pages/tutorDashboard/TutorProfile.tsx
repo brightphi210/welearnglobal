@@ -159,57 +159,6 @@ const EmptyState = ({ onCreate }: { onCreate: () => void }) => (
     </div>
 );
 
-/* ─── Read-only profile view ─────────────────────────────────────────── */
-const InfoRow = ({ icon: Icon, label, value }: { icon: any; label: string; value?: string | number }) => {
-    if (!value) return null;
-    return (
-        <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gray-50 border border-gray-200 flex items-center justify-center shrink-0">
-                <Icon size={14} className="text-gray-500" />
-            </div>
-            <div className="min-w-0">
-                <p className="text-[11px] text-gray-400 font-semibold uppercase tracking-wide">{label}</p>
-                <p className="text-sm font-semibold text-gray-800 break-words">{value}</p>
-            </div>
-        </div>
-    );
-};
-
-/* ─── Format a 24hr "HH:MM" time string for friendly display ─────────── */
-const formatTimeDisplay = (time: string) => {
-    if (!time) return "";
-    const [hStr, mStr] = time.split(":");
-    let h = parseInt(hStr, 10);
-    const period = h >= 12 ? "PM" : "AM";
-    h = h % 12 || 12;
-    return `${h}:${mStr} ${period}`;
-};
-
-const AvailabilitySummary = ({ availability }: { availability: DayAvailability[] }) => {
-    const activeDays = availability.filter(d => d.enabled && d.slots.length > 0);
-    if (activeDays.length === 0) {
-        return <p className="text-xs text-gray-400 italic">No availability set yet</p>;
-    }
-    return (
-        <div className="flex flex-col gap-2.5">
-            {activeDays.map(d => {
-                const meta = DAYS_OF_WEEK.find(x => x.key === d.day)!;
-                return (
-                    <div key={d.day} className="flex items-start gap-3">
-                        <span className="text-xs font-bold text-gray-800 w-20 shrink-0">{meta.label}</span>
-                        <div className="flex flex-wrap gap-1.5">
-                            {d.slots.map(s => (
-                                <span key={s.id} className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-full text-[11px] font-semibold">
-                                    {formatTimeDisplay(s.startTime)} – {formatTimeDisplay(s.endTime)}
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-                );
-            })}
-        </div>
-    );
-};
 
 
 const fieldCls = "flex items-center gap-3 border border-gray-200 rounded-lg px-4 py-3 focus-within:border-green-500 focus-within:ring-2 focus-within:ring-green-100 transition-all bg-white";
