@@ -5,62 +5,87 @@ import {
     FiBook,
     FiCalendar,
     FiCheckCircle,
+    FiClock,
     FiFlag,
     FiMapPin,
     FiMessageSquare,
     FiX,
 } from "react-icons/fi";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
+import { toast, ToastContainer } from "react-toastify";
 import LoadingOverlay from "../../components/LoadingOverlay";
 import TutorsBanner from "../../components/TutorsBanner";
+import { useMakeBookings } from "../../hooks/mutations/allMutation";
 import { useGetSingleTutor } from "../../hooks/queries/allQueries";
 
-/* ─── Shape returned by the tutors API ───────────────────────────────── */
-interface ExperienceItem { role: string; org: string; period: string; }
-interface EducationItem { degree: string; school: string; year: string; }
 
-interface TutorData {
-    id: number;
-    full_name: string;
-    email?: string;
-    bio?: string;
-    subjects?: string[] | null;
-    skills?: string[] | null;
-    session_status?: "online" | "onsite" | "both" | string;
-    experience?: ExperienceItem[] | null;
-    education?: EducationItem[] | null;
-    hourly_rate?: string | number;
-    average_rating?: string | number;
-    total_sessions?: number;
-    is_verified?: boolean;
-    verification_status?: string;
-    location?: string;
-    profile_image?: string | null;
-    banner?: string | null;
-    language?: string;
-    professional_title?: string;
-}
 
 interface BookingDetails {
     subject: string;
     customSubject: string;
-    title: string;
     notes: string;
 }
 
+interface AvailabilitySlot {
+    id: number;
+    day_of_week: string;
+    start_time: string; // "HH:MM:SS"
+    end_time: string;   // "HH:MM:SS"
+    is_booked: boolean;
+}
+
+type SessionType = "online" | "onsite";
+
 const SUBJECT_OPTIONS = ["English", "Maths", "Product Design", "Marketing", "Other"];
+
+// Order days Mon -> Sun so the schedule reads naturally regardless of API order
+const DAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+/* ─── Helpers ─────────────────────────────────────────────────────────── */
+const formatTime = (time: string) => {
+    if (!time) return "";
+    const [hStr, mStr] = time.split(":");
+    let hours = parseInt(hStr, 10);
+    const minutes = mStr ?? "00";
+    const period = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12;
+    if (hours === 0) hours = 12;
+    return `${hours}:${minutes} ${period}`;
+};
+
+const groupSlotsByDay = (slots: AvailabilitySlot[]) => {
+    const grouped: Record<string, AvailabilitySlot[]> = {};
+    slots.forEach((slot) => {
+        if (!grouped[slot.day_of_week]) grouped[slot.day_of_week] = [];
+        grouped[slot.day_of_week].push(slot);
+    });
+
+    // Sort each day's slots by start time
+    Object.values(grouped).forEach((daySlots) =>
+        daySlots.sort((a, b) => a.start_time.localeCompare(b.start_time))
+    );
+
+    // Return days in Mon -> Sun order, only including days the tutor actually has slots for
+    return DAY_ORDER.filter((day) => grouped[day]).map((day) => ({
+        day,
+        slots: grouped[day],
+    }));
+};
 
 /* ─── Booking Details Modal ──────────────────────────────────────────── */
 const BookingDetailsModal = ({
     onClose,
     onSubmit,
+    isSubmitting,
+    submitError,
 }: {
     onClose: () => void;
     onSubmit: (details: BookingDetails) => void;
+    isSubmitting: boolean;
+    submitError: string | null;
 }) => {
     const [subject, setSubject] = useState("");
     const [customSubject, setCustomSubject] = useState("");
-    const [title, setTitle] = useState("");
     const [notes, setNotes] = useState("");
     const [error, setError] = useState("");
 
@@ -73,22 +98,19 @@ const BookingDetailsModal = ({
             setError("Please tell us the subject");
             return;
         }
-        if (!title.trim()) {
-            setError("Please add a title for the session");
-            return;
-        }
         setError("");
-        onSubmit({ subject, customSubject, title, notes });
+        onSubmit({ subject, customSubject, notes });
     };
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={isSubmitting ? undefined : onClose} />
 
             <div className="relative bg-white rounded-2xl border border-gray-200 shadow-xl max-w-md w-full p-6 sm:p-7 max-h-[90vh] overflow-y-auto">
                 <button
                     onClick={onClose}
-                    className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition-all"
+                    disabled={isSubmitting}
+                    className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                     <FiX size={16} />
                 </button>
@@ -138,18 +160,6 @@ const BookingDetailsModal = ({
                         )}
                     </div>
 
-                    {/* Title */}
-                    <div>
-                        <label className="block text-xs font-semibold text-gray-800 mb-2">Title</label>
-                        <input
-                            type="text"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            placeholder="e.g. Struggling with Maths"
-                            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400"
-                        />
-                    </div>
-
                     {/* Notes */}
                     <div>
                         <label className="block text-xs font-semibold text-gray-800 mb-2">Notes</label>
@@ -163,20 +173,23 @@ const BookingDetailsModal = ({
                     </div>
 
                     {error && <p className="text-xs text-red-500 font-medium">{error}</p>}
+                    {submitError && <p className="text-xs text-red-500 font-medium">{submitError}</p>}
                 </div>
 
                 <div className="flex items-center gap-2">
                     <button
                         onClick={onClose}
-                        className="flex-1 py-2.5 border border-gray-200 rounded-full text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all"
+                        disabled={isSubmitting}
+                        className="flex-1 py-3.5 border border-gray-200 rounded-full text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                     >
                         Cancel
                     </button>
                     <button
                         onClick={handleSubmit}
-                        className="flex-1 py-2.5 bg-green-700 text-white rounded-full text-sm font-semibold hover:bg-green-800 transition-all"
+                        disabled={isSubmitting}
+                        className="flex-1 py-3.5 bg-green-700 text-white rounded-full text-sm font-semibold hover:bg-green-800 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                        Continue
+                        {isSubmitting ? "Booking..." : "Continue"}
                     </button>
                 </div>
             </div>
@@ -184,21 +197,58 @@ const BookingDetailsModal = ({
     );
 };
 
+const BookingSuccessModal = ({
+    onClose,
+    tutorName,
+    selectedSlot,
+    bookingDetails,
+}: {
+    onClose: () => void;
+    tutorName: string;
+    selectedSlot: AvailabilitySlot | null;
+    bookingDetails: BookingDetails | null;
+}) => (
+    <div className="fixed inset-0 z-60 flex items-center justify-center px-4">
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+        <div className="relative bg-white rounded-2xl border border-gray-200 shadow-xl max-w-md w-full p-6 sm:p-7 text-center">
+            <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FiCheckCircle className="text-green-700" size={28} />
+            </div>
+            <h3 className="text-lg font-extrabold text-gray-900 mb-2">Booking Confirmed</h3>
+            <p className="text-sm text-gray-600 mb-3">
+                Your session with {tutorName} is confirmed for {selectedSlot?.day_of_week} {selectedSlot ? `${formatTime(selectedSlot.start_time)} – ${formatTime(selectedSlot.end_time)}` : "your selected slot"}.
+            </p>
+            {bookingDetails?.notes && (
+                <p className="text-[11px] text-gray-500 mb-5">{bookingDetails.notes}</p>
+            )}
+            <Link to={'/student/dashboard/bookings'} className="block">
+                <button
+                    onClick={onClose}
+                    className="w-full py-3.5 bg-green-700 text-white rounded-full font-bold text-xs hover:bg-green-800 transition-all"
+                >
+                    View My Bookings
+                </button>
+            </Link>
+        </div>
+    </div>
+);
+
 const StudentTutorProfile = () => {
     const { id } = useParams<{ id: string }>();
 
-    const [selectedDate, setSelectedDate] = useState(18);
-    const [selectedTime, setSelectedTime] = useState("10:00 AM");
+    const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
+    const [sessionType, setSessionType] = useState<SessionType | null>(null);
     const [bookingStep, setBookingStep] = useState(1);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [bookingDetails, setBookingDetails] = useState<BookingDetails | null>(null);
+    const [bookingError, setBookingError] = useState<string | null>(null);
     const { tutorData, isLoading } = useGetSingleTutor(id!);
     const tutor = tutorData?.data || null;
 
-    console.log("tutorData:", tutor);
+    console.log("Tutor data:", tutor);
 
-    const daysInMonth = Array.from({ length: 31 }, (_, i) => i + 1);
-    const availableTimes = ["09:00 AM", "10:00 AM", "02:00 PM", "04:00 PM"];
+    const { mutate: makeBookings, isPending: isMakingBookings } = useMakeBookings();
 
     const StarRating = ({ rating, sessions }: { rating: number; sessions: number }) => (
         <div className="flex items-center gap-2">
@@ -250,7 +300,8 @@ const StudentTutorProfile = () => {
     const totalSessions = tutor.total_sessions ?? 0;
 
     // Combine subjects + skills for "Areas of Expertise", de-duplicated
-    const expertise = Array.from(new Set([...(tutor.subjects || []), ...(tutor.skills || [])]));
+    const expertise = Array.from(new Set([...(tutor.skills || [])]));
+    const subjects = Array.from(new Set([...(tutor.subjects || [])]));
 
     const experience = tutor.experience || [];
     const education = tutor.education || [];
@@ -261,15 +312,46 @@ const StudentTutorProfile = () => {
 
     const firstName = tutor.full_name?.split(" ")[0] || "this mentor";
 
+    // Real availability set by the tutor, grouped and sorted by day
+    const availabilitySlots: AvailabilitySlot[] = tutor.availability_slots || [];
+    const groupedAvailability = groupSlotsByDay(availabilitySlots);
+    const selectedSlot = availabilitySlots.find((s) => s.id === selectedSlotId) || null;
+
     const handleDetailsSubmit = (details: BookingDetails) => {
-        setBookingDetails(details);
-        setShowDetailsModal(false);
-        // TODO: send { tutor_id, date, time, subject, title, notes } to your booking API here
-        setBookingStep(2);
+        if (!selectedSlot || !sessionType) return;
+
+        const payload = {
+            tutor_profile: tutor.id,
+            availability_slot: selectedSlot.id,
+            subject: details.subject === "Other" ? details.customSubject.trim() : details.subject,
+            session_type: sessionType,
+            notes: details.notes.trim(),
+        };
+
+        setBookingError(null);
+
+        makeBookings(payload, {
+            onSuccess: (res: any) => {
+                setBookingDetails(details);
+                setShowDetailsModal(false);
+                setShowSuccessModal(true);
+                setBookingStep(2);
+                toast(`Your session with ${firstName} has been booked successfully!`, { type: "success" });
+                console.log("Booking successful:", res);
+            },
+            onError: (err: any) => {
+                setBookingError(
+                    err?.response?.data?.message ||
+                    err?.message ||
+                    "Something went wrong while booking this session. Please try again."
+                );
+            },
+        });
     };
 
     return (
         <div className="md:pl-56 pb-20 md:pb-8">
+            <ToastContainer />
             <div className="min-h-screen pt-8 bg-gray-50">
                 <div className="px-4 sm:px-6 lg:px-8 max-w-7xl m-auto py-8 text-sm">
 
@@ -364,7 +446,7 @@ const StudentTutorProfile = () => {
 
                                         {/* Actions */}
                                         <div className="flex gap-2">
-                                            <button className="flex-1 px-4 py-3 bg-green-700 text-white rounded-full font-semibold text-sm flex items-center justify-center gap-2 hover:bg-green-800 transition-all">
+                                            <button className="px-4 py-3 bg-green-700 text-white rounded-full font-semibold text-sm flex items-center justify-center gap-2 hover:bg-green-800 transition-all">
                                                 <FiMessageSquare size={14} />
                                                 Message {firstName}
                                             </button>
@@ -389,6 +471,19 @@ const StudentTutorProfile = () => {
                                         {expertise.map((skill, idx) => (
                                             <span key={idx} className="px-3 py-1 bg-gray-100 text-gray-700 font-semibold rounded-full text-[10px]">
                                                 {skill}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {subjects.length > 0 && (
+                                <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
+                                    <h3 className="font-bold text-gray-900 mb-3">Subjects</h3>
+                                    <div className="flex flex-wrap gap-2">
+                                        {subjects.map((subject, idx) => (
+                                            <span key={idx} className="px-3 py-1 bg-gray-100 text-gray-700 font-semibold rounded-full text-[10px]">
+                                                {subject}
                                             </span>
                                         ))}
                                     </div>
@@ -438,6 +533,38 @@ const StudentTutorProfile = () => {
                                 </div>
                             )}
 
+                            {/* Weekly Availability — shows the schedule the tutor actually set */}
+                            <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
+                                <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                    <FiClock size={14} className="text-green-700" />
+                                    Weekly Availability
+                                </h3>
+                                {groupedAvailability.length > 0 ? (
+                                    <div className="space-y-3">
+                                        {groupedAvailability.map(({ day, slots }) => (
+                                            <div key={day} className="flex items-start gap-3">
+                                                <span className="w-20 shrink-0 text-xs font-semibold text-gray-900 pt-1">{day}</span>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {slots.map((slot) => (
+                                                        <span
+                                                            key={slot.id}
+                                                            className={`px-2.5 py-1 rounded-full text-[10px] font-semibold border ${slot.is_booked
+                                                                ? "bg-gray-50 text-gray-400 border-gray-200 line-through"
+                                                                : "bg-green-50 text-green-700 border-green-200"
+                                                                }`}
+                                                        >
+                                                            {formatTime(slot.start_time)} – {formatTime(slot.end_time)}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-gray-400 italic">No availability has been set yet</p>
+                                )}
+                            </div>
+
                             {/* Reviews — no reviews endpoint yet, so show an honest empty state */}
                             <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6">
                                 <div className="flex items-center justify-between mb-4">
@@ -464,15 +591,21 @@ const StudentTutorProfile = () => {
                                         <div className="mb-4">
                                             <label className="block text-xs font-semibold text-gray-800 mb-2">Session Type</label>
                                             <div className="flex gap-2">
-                                                {["Online", "On-site"].map((type) => {
-                                                    const active = type === "Online" ? isOnline : isOnsite;
+                                                {(["Online", "On-site"] as const).map((type) => {
+                                                    const value: SessionType = type === "Online" ? "online" : "onsite";
+                                                    const active = value === "online" ? isOnline : isOnsite;
+                                                    const isSelected = sessionType === value;
                                                     return (
                                                         <button
                                                             key={type}
+                                                            type="button"
                                                             disabled={!active}
-                                                            className={`flex-1 px-3 py-2 rounded-lg font-semibold text-xs border transition-all ${active
-                                                                ? "bg-green-50 text-green-700 border-green-300"
-                                                                : "bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed"
+                                                            onClick={() => active && setSessionType(value)}
+                                                            className={`flex-1 px-3 py-2 rounded-lg font-semibold text-xs border transition-all ${!active
+                                                                ? "bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed"
+                                                                : isSelected
+                                                                    ? "bg-green-700 text-white border-green-700"
+                                                                    : "bg-green-50 text-green-700 border-green-300 hover:border-green-500"
                                                                 }`}
                                                         >
                                                             {type}
@@ -482,41 +615,70 @@ const StudentTutorProfile = () => {
                                             </div>
                                         </div>
 
-                                        {/* Calendar */}
+                                        {/* Availability — pick from the slots the tutor actually set, radio-style */}
                                         <div className="mb-4">
-                                            <label className="block text-xs font-semibold text-gray-800 mb-2">October 2024</label>
-                                            <div className="grid grid-cols-7 gap-1">
-                                                {["M", "T", "W", "T", "F", "S", "S"].map((day, idx) => (
-                                                    <div key={idx} className="text-center text-[10px] font-semibold text-gray-500 py-1">
-                                                        {day}
-                                                    </div>
-                                                ))}
-                                                {daysInMonth.map((day) => (
-                                                    <button
-                                                        key={day}
-                                                        onClick={() => setSelectedDate(day)}
-                                                        className={`py-1.5 rounded-lg text-[10px] font-medium transition-all ${selectedDate === day ? "bg-green-700 text-white" : "bg-gray-50 text-gray-700 border border-gray-200 hover:bg-green-50"}`}
-                                                    >
-                                                        {day}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
+                                            <label className="block text-xs font-semibold text-gray-800 mb-2">
+                                                Select Availability
+                                            </label>
 
-                                        {/* Time Slots */}
-                                        <div className="mb-4">
-                                            <label className="block text-xs font-semibold text-gray-800 mb-2">Available Times (GMT)</label>
-                                            <div className="grid grid-cols-2 gap-2">
-                                                {availableTimes.map((time) => (
-                                                    <button
-                                                        key={time}
-                                                        onClick={() => setSelectedTime(time)}
-                                                        className={`py-2 rounded-lg text-[10px] font-semibold transition-all ${selectedTime === time ? "bg-green-50 text-green-700 border border-green-300" : "bg-gray-50 text-gray-700 border border-gray-200 hover:bg-gray-100"}`}
-                                                    >
-                                                        {time}
-                                                    </button>
-                                                ))}
-                                            </div>
+                                            {groupedAvailability.length > 0 ? (
+                                                <div
+                                                    role="radiogroup"
+                                                    aria-label="Select an availability slot"
+                                                    className="space-y-3 max-h-72 overflow-y-auto pr-1"
+                                                >
+                                                    {groupedAvailability.map(({ day, slots }) => (
+                                                        <div key={day}>
+                                                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide mb-1.5">
+                                                                {day}
+                                                            </p>
+                                                            <div className="flex flex-col gap-1.5">
+                                                                {slots.map((slot) => {
+                                                                    const isSelected = selectedSlotId === slot.id;
+                                                                    return (
+                                                                        <button
+                                                                            key={slot.id}
+                                                                            type="button"
+                                                                            role="radio"
+                                                                            aria-checked={isSelected}
+                                                                            disabled={slot.is_booked}
+                                                                            onClick={() => setSelectedSlotId(slot.id)}
+                                                                            className={`w-full flex items-center gap-2.5 py-2 px-2.5 rounded-lg text-[10px] font-semibold border transition-all text-left ${slot.is_booked
+                                                                                ? "bg-gray-50 text-gray-300 border-gray-200 cursor-not-allowed"
+                                                                                : isSelected
+                                                                                    ? "bg-green-50 text-green-700 border-green-700"
+                                                                                    : "bg-gray-50 text-gray-700 border-gray-400 hover:bg-green-50 hover:border-green-700"
+                                                                                }`}
+                                                                        >
+                                                                            {/* Radio circle */}
+                                                                            <span
+                                                                                className={`shrink-0 w-3.5 h-3.5 rounded-full border flex items-center justify-center transition-all ${slot.is_booked
+                                                                                    ? "border-gray-200"
+                                                                                    : isSelected
+                                                                                        ? "border-green-700"
+                                                                                        : "border-gray-500 border"
+                                                                                    }`}
+                                                                            >
+                                                                                {isSelected && !slot.is_booked && (
+                                                                                    <span className="w-1.5 h-1.5 rounded-full bg-green-700" />
+                                                                                )}
+                                                                            </span>
+
+                                                                            <span className={slot.is_booked ? "line-through" : ""}>
+                                                                                {formatTime(slot.start_time)} – {formatTime(slot.end_time)}
+                                                                            </span>
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-xs text-gray-400 italic">
+                                                    This mentor hasn't set any availability yet
+                                                </p>
+                                            )}
                                         </div>
 
                                         {/* Fee Summary */}
@@ -535,11 +697,19 @@ const StudentTutorProfile = () => {
                                             </div>
                                         </div>
 
+                                        {bookingError && (
+                                            <p className="text-[10px] text-red-500 font-medium text-center mb-3">{bookingError}</p>
+                                        )}
+
                                         <button
                                             onClick={() => setShowDetailsModal(true)}
-                                            className="w-full py-3 bg-green-700 text-white rounded-full font-bold text-xs hover:bg-green-800 transition-all"
+                                            disabled={!selectedSlot || !sessionType}
+                                            className={`w-full py-3 rounded-full font-bold text-xs transition-all ${selectedSlot && sessionType
+                                                ? "bg-green-700 text-white hover:bg-green-800"
+                                                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                                                }`}
                                         >
-                                            Confirm Booking
+                                            {!sessionType ? "Select a session type" : !selectedSlot ? "Select a time slot" : "Confirm Booking"}
                                         </button>
 
                                         <p className="text-[10px] text-gray-500 text-center mt-3">
@@ -555,11 +725,13 @@ const StudentTutorProfile = () => {
                                         </div>
                                         <h4 className="text-sm font-bold text-gray-900 mb-1">Booking Confirmed!</h4>
                                         <p className="text-xs text-gray-600 mb-2">
-                                            Your session with {tutor.full_name} is confirmed for October {selectedDate}, 2024 at {selectedTime}
+                                            Your session with {tutor.full_name} is confirmed for {selectedSlot?.day_of_week}{" "}
+                                            {selectedSlot && `${formatTime(selectedSlot.start_time)} – ${formatTime(selectedSlot.end_time)}`}
                                         </p>
                                         {bookingDetails && (
                                             <p className="text-[10px] text-gray-500 mb-5">
-                                                {bookingDetails.subject === "Other" ? bookingDetails.customSubject : bookingDetails.subject} · "{bookingDetails.title}"
+                                                {bookingDetails.subject === "Other" ? bookingDetails.customSubject : bookingDetails.subject}
+                                                {bookingDetails.notes ? ` • ${bookingDetails.notes}` : ""}
                                             </p>
                                         )}
                                         <button className="w-full py-2.5 bg-green-700 text-white rounded-full font-bold text-xs hover:bg-green-800 transition-all mb-2">
@@ -569,6 +741,10 @@ const StudentTutorProfile = () => {
                                             onClick={() => {
                                                 setBookingStep(1);
                                                 setBookingDetails(null);
+                                                setSelectedSlotId(null);
+                                                setSessionType(null);
+                                                setBookingError(null);
+                                                setShowSuccessModal(false);
                                             }}
                                             className="w-full py-2.5 border border-gray-300 text-xs font-semibold text-gray-700 rounded-full hover:bg-gray-50 transition-all"
                                         >
@@ -585,8 +761,21 @@ const StudentTutorProfile = () => {
 
             {showDetailsModal && (
                 <BookingDetailsModal
-                    onClose={() => setShowDetailsModal(false)}
+                    onClose={() => {
+                        if (!isMakingBookings) setShowDetailsModal(false);
+                    }}
                     onSubmit={handleDetailsSubmit}
+                    isSubmitting={isMakingBookings}
+                    submitError={bookingError}
+                />
+            )}
+
+            {showSuccessModal && (
+                <BookingSuccessModal
+                    onClose={() => setShowSuccessModal(false)}
+                    tutorName={tutor.full_name}
+                    selectedSlot={selectedSlot}
+                    bookingDetails={bookingDetails}
                 />
             )}
         </div>

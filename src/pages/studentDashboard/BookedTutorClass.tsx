@@ -4,33 +4,22 @@ import {
   FiCalendar,
   FiClock,
   FiSearch,
-  FiVideo
+  FiVideo,
 } from "react-icons/fi";
-
-interface Booking {
-  id: number;
-  tutorName: string;
-  tutorAvatar: string;
-  subject: string;
-  date: string;
-  time: string;
-  duration: string;
-  sessionType: "Online" | "On-site";
-  status: "Confirmed" | "Pending" | "Cancelled";
-  notes: string;
-}
+import { toast, ToastContainer } from "react-toastify";
+import LoadingOverlay from "../../components/LoadingOverlay";
+import { useGetMyBookingsAsUser } from "../../hooks/queries/allQueries";
+import {
+  type Booking,
+  extractBookingList,
+  mapBookingResponse,
+} from "../../utils/bookingUtils";
 
 const BookedTutorClass = () => {
   const [activeTab, setActiveTab] = useState<"confirmed" | "pending" | "cancelled">("confirmed");
+  const { myBookingsAsUser, isLoading } = useGetMyBookingsAsUser();
 
-  const [bookings, setBookings] = useState<Booking[]>([
-    { id: 1, tutorName: "Dr. Sarah Jenkins", tutorAvatar: "SJ", subject: "Advanced Physics", date: "Tue, Oct 26", time: "04:00 PM - 05:00 PM", duration: "1 hr", sessionType: "Online", status: "Confirmed", notes: "Focus on electromagnetic induction problems" },
-    { id: 2, tutorName: "Marcus Thompson", tutorAvatar: "MT", subject: "Calculus II", date: "Wed, Oct 27", time: "02:00 PM - 03:30 PM", duration: "1.5 hrs", sessionType: "Online", status: "Confirmed", notes: "Review integration techniques" },
-    { id: 3, tutorName: "Elena Rodriguez", tutorAvatar: "ER", subject: "Spanish Literature", date: "Thu, Oct 28", time: "06:00 PM - 07:00 PM", duration: "1 hr", sessionType: "On-site", status: "Pending", notes: "Discuss García Márquez's 100 Years of Solitude" },
-    { id: 4, tutorName: "James Wilson", tutorAvatar: "JW", subject: "Web Development", date: "Fri, Oct 29", time: "03:00 PM - 04:30 PM", duration: "1.5 hrs", sessionType: "Online", status: "Confirmed", notes: "Building React components" },
-    { id: 5, tutorName: "Prof. Michael Chen", tutorAvatar: "MC", subject: "Physics - Mechanics", date: "Sat, Oct 30", time: "10:00 AM - 11:30 AM", duration: "1.5 hrs", sessionType: "Online", status: "Pending", notes: "Newton's laws and applications" },
-    { id: 6, tutorName: "Priya Nair", tutorAvatar: "PN", subject: "AP Chemistry", date: "Jun 18", time: "01:00 PM - 02:00 PM", duration: "1 hr", sessionType: "Online", status: "Cancelled", notes: "Lab report review" },
-  ]);
+  const bookings: Booking[] = extractBookingList(myBookingsAsUser).map(mapBookingResponse);
 
   const tabs = [
     { id: "confirmed", label: "Confirmed", count: bookings.filter((b) => b.status === "Confirmed").length },
@@ -39,12 +28,6 @@ const BookedTutorClass = () => {
   ] as const;
 
   const filteredBookings = bookings.filter((b) => b.status.toLowerCase() === activeTab);
-
-  const handleCancelBooking = (id: number) => {
-    setBookings((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, status: "Cancelled" } : b))
-    );
-  };
 
   const statusBadge: Record<string, string> = {
     Confirmed: "bg-green-50 text-green-700",
@@ -57,85 +40,97 @@ const BookedTutorClass = () => {
     "On-site": "bg-orange-50 text-orange-700",
   };
 
-  const BookingCard = ({ booking }: { booking: Booking }) => (
-    <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5">
-      <div className="flex items-start sm:items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-green-950 flex items-center justify-center text-white font-bold text-sm shrink-0">
-            {booking.tutorAvatar}
+  const handleOpenSession = (booking: Booking) => {
+    if (!booking.sessionLink) {
+      toast("No session link is available yet.", { type: "info" });
+      return;
+    }
+
+    window.open(booking.sessionLink, "_blank", "noopener,noreferrer");
+  };
+
+  const BookingCard = ({ booking }: { booking: Booking }) => {
+    const [imgError, setImgError] = useState(false);
+
+    return (
+      <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 overflow-hidden">
+        <div className="flex items-start sm:items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            {booking.image && !imgError ? (
+              <img
+                src={booking.image}
+                alt={booking.tutorName}
+                onError={() => setImgError(true)}
+                className="w-11 h-11 sm:w-12 sm:h-12 rounded-full object-cover shrink-0"
+              />
+            ) : (
+              <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-gray-700 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                {booking.tutorAvatar}
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="font-bold text-gray-900 text-sm truncate">{booking.tutorName}</p>
+              <p className="text-xs text-green-700 font-semibold wrap-break-word">{booking.subject}</p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <p className="font-bold text-gray-900 text-sm truncate">{booking.tutorName}</p>
-            <p className="text-xs text-green-700 font-semibold truncate">{booking.subject}</p>
-          </div>
+
+          <span className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold ${statusBadge[booking.status]}`}>
+            {booking.status}
+          </span>
         </div>
 
-        <span className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold ${statusBadge[booking.status]}`}>
-          {booking.status}
-        </span>
-      </div>
+        <div className="flex items-center gap-x-3 gap-y-2 flex-wrap mt-4 pt-4 border-t border-gray-100 text-xs text-gray-600">
+          <span className="flex items-center gap-1.5">
+            <FiCalendar size={13} />
+            {booking.date}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <FiClock size={13} />
+            {booking.time}
+          </span>
+          <span className={`px-2 py-1 ml-auto rounded text-[11px] font-semibold ${sessionTypeBadge[booking.sessionType]}`}>
+            {booking.sessionType}
+          </span>
+        </div>
 
-      <div className="flex items-center gap-x-3 gap-y-2 flex-wrap mt-4 pt-4 border-t border-gray-100 text-xs text-gray-600">
-        <span className="flex items-center gap-1.5">
-          <FiCalendar size={13} />
-          {booking.date}
-        </span>
-        <span className="flex items-center gap-1.5">
-          <FiClock size={13} />
-          {booking.time}
-        </span>
-        <span className={`px-2 py-1 rounded text-[11px] font-semibold ${sessionTypeBadge[booking.sessionType]}`}>
-          {booking.sessionType}
-        </span>
-        <span className="sm:ml-auto font-semibold text-gray-900 text-xs">{booking.duration}</span>
-      </div>
+        {booking.notes && (
+          <p className="text-xs text-gray-600 p-2.5 bg-gray-50 rounded-lg border border-gray-200 mt-3 wrap-break-word">
+            {booking.notes}
+          </p>
+        )}
 
-      {booking.notes && (
-        <p className="text-xs text-gray-600 p-2.5 bg-gray-50 rounded-lg border border-gray-200 mt-3 line-clamp-2">
-          {booking.notes}
-        </p>
-      )}
-
-      <div className="flex flex-col xs:flex-row sm:flex-row items-stretch gap-2 mt-4 ">
-        {booking.status === "Confirmed" && (
-          <>
-            <button className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 bg-green-700 text-white rounded-full text-xs font-semibold hover:bg-green-800 transition-all">
+        <div className="flex flex-col gap-2 mt-4">
+          {booking.status === "Confirmed" && (
+            <button
+              onClick={() => handleOpenSession(booking)}
+              className="flex-1 flex items-center justify-center gap-1.5 px-4 py-3.5 bg-green-700 text-white rounded-full text-xs font-semibold hover:bg-green-800 transition-all"
+            >
               <FiVideo size={14} />
               Join Class
             </button>
-            <button className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 border border-gray-300 text-gray-700 rounded-full text-xs font-semibold hover:bg-gray-50 transition-all">
-              Message
-            </button>
-          </>
-        )}
+          )}
 
-        {booking.status === "Pending" && (
-          <>
-            <button className="flex-1 px-4 py-2 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold cursor-default">
+          {booking.status === "Pending" && (
+            <button className="w-full px-4 py-2 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold cursor-default">
               Awaiting Confirmation
             </button>
-            <button
-              onClick={() => handleCancelBooking(booking.id)}
-              className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 border border-gray-300 text-red-600 rounded-full text-xs font-semibold hover:bg-red-50 transition-all"
-            >
-              Cancel
-            </button>
-          </>
-        )}
+          )}
 
-        {booking.status === "Cancelled" && (
-          <button className="w-full px-4 py-2 border border-gray-300 text-gray-500 rounded-full text-xs font-semibold hover:bg-gray-50 transition-all">
-            View Details
-          </button>
-        )}
+          {booking.status === "Cancelled" && (
+            <button className="w-full px-4 py-2 border border-gray-300 text-gray-500 rounded-full text-xs font-semibold hover:bg-gray-50 transition-all">
+              View Details
+            </button>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="md:pl-56 pb-20 md:pb-8 lg:pt-20">
+      <LoadingOverlay visible={isLoading} />
+      <ToastContainer />
       <div className="min-h-screen pt-8 bg-gray-50 px-4 sm:px-6 lg:px-8 max-w-7xl m-auto">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-1">My Bookings</h1>
@@ -153,8 +148,7 @@ const BookedTutorClass = () => {
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex items-center gap-2 mb-6 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        <div className="flex items-center gap-2 mb-6 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden scrollbar-none">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -175,9 +169,12 @@ const BookedTutorClass = () => {
           ))}
         </div>
 
-        {/* Bookings List */}
-        {filteredBookings.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {isLoading ? (
+          <div className="bg-white rounded-2xl border border-gray-200 p-8 sm:p-12 text-center text-sm text-gray-500">
+            Loading your bookings...
+          </div>
+        ) : filteredBookings.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {filteredBookings.map((booking) => (
               <BookingCard key={booking.id} booking={booking} />
             ))}

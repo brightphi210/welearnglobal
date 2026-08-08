@@ -1,13 +1,18 @@
-import { useState } from "react";
+import { useMemo } from "react";
 import { FaStar } from "react-icons/fa";
 import {
     FiArrowRight, FiBookmark, FiBookOpen, FiCalendar, FiCheckCircle, FiCode,
     FiGlobe, FiGrid, FiMusic, FiSearch, FiZap
 } from "react-icons/fi";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import LoadingOverlay from "../../components/LoadingOverlay";
 import TutorsBanner from "../../components/TutorsBanner";
-import { useGetTutors, useGetUserProfile } from "../../hooks/queries/allQueries";
+import { useGetMyBookingsAsUser, useGetTutors, useGetUserProfile } from "../../hooks/queries/allQueries";
+import {
+    type Booking,
+    extractBookingList,
+    mapBookingResponse,
+} from "../../utils/bookingUtils";
 
 interface UpcomingSession {
     title: string;
@@ -39,16 +44,7 @@ interface TutorData {
 }
 
 const StudentOverview = () => {
-    const [upcomingSession] = useState<UpcomingSession | null>({
-        title: "Advanced Organic Chemistry",
-        instructor: "Dr. Sarah Jenkins",
-        startTime: "4:00 PM",
-        endTime: "5:30 PM",
-        minutesUntil: "15",
-    });
-
-    // const [upcomingSession] = useState(null)
-
+    const navigate = useNavigate();
     const categories = [
         { id: 1, name: "Mathematics", icon: FiBookOpen, color: "bg-blue-500" },
         { id: 2, name: "Programming", icon: FiCode, color: "bg-green-500" },
@@ -57,6 +53,12 @@ const StudentOverview = () => {
         { id: 5, name: "Music", icon: FiMusic, color: "bg-pink-500" },
         { id: 6, name: "All", icon: FiGrid, color: "bg-green-700" },
     ];
+
+    const handleCategoryClick = (category: string) => {
+        const subject = category === "All" ? "" : category;
+        const query = subject ? `?subject=${encodeURIComponent(subject)}` : "";
+        navigate(`/student/dashboard/tutors${query}`);
+    };
 
     const StarRating = ({ rating, sessions }: { rating: number; sessions: number }) => (
         <div className="flex items-center gap-2">
@@ -205,14 +207,56 @@ const StudentOverview = () => {
 
     const { userProfile, isLoading } = useGetUserProfile();
     const { tutors, isLoading: isTutorLoading } = useGetTutors();
+    const { myBookingsAsUser, isLoading: isBookingsLoading } = useGetMyBookingsAsUser();
     const user = userProfile?.data;
     const myTutors: TutorData[] = tutors?.data?.results || [];
 
-    console.log("userProfile:", myTutors);
+    // Normalize the bookings response through the same shared logic the
+    // bookings page uses, so "status" and date parsing stay consistent
+    // across both pages.
+    const bookings: Booking[] = useMemo(
+        () => extractBookingList(myBookingsAsUser).map(mapBookingResponse),
+        [myBookingsAsUser]
+    );
+
+    const upcomingSession = useMemo<UpcomingSession | null>(() => {
+        const now = Date.now();
+
+        const candidates = bookings
+            .filter((booking) => booking.status !== "Cancelled" && booking.rawDate)
+            .map((booking) => {
+                const sessionDate = new Date(
+                    `${booking.rawDate}${booking.rawStartTime ? `T${booking.rawStartTime}` : ""}`
+                );
+                return { booking, sessionDate };
+            })
+            .filter(({ sessionDate }) => !Number.isNaN(sessionDate.getTime()) && sessionDate.getTime() >= now)
+            .sort((a, b) => a.sessionDate.getTime() - b.sessionDate.getTime());
+
+        const next = candidates[0];
+        if (!next) return null;
+
+        const { booking, sessionDate } = next;
+        const endDate = booking.rawEndTime
+            ? new Date(`${booking.rawDate}T${booking.rawEndTime}`)
+            : null;
+
+        return {
+            title: booking.subject,
+            instructor: booking.tutorName,
+            startTime: booking.rawStartTime
+                ? sessionDate.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+                : "TBD",
+            endTime: endDate && !Number.isNaN(endDate.getTime())
+                ? endDate.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+                : "TBD",
+            minutesUntil: String(Math.max(1, Math.round((sessionDate.getTime() - now) / (1000 * 60)))),
+        };
+    }, [bookings]);
 
     return (
         <div className="md:pl-56 pb-20 md:pb-8">
-            <LoadingOverlay visible={isLoading || isTutorLoading} />
+            <LoadingOverlay visible={isLoading || isTutorLoading || isBookingsLoading} />
             <div className="min-h-screen pt-8 bg-gray-50">
                 <div className="px-4 sm:px-6 lg:px-8 max-w-7xl m-auto py-8">
                     {/* Header */}
@@ -280,6 +324,7 @@ const StudentOverview = () => {
                             {categories.map(({ id, name, icon: Icon }) => (
                                 <div key={id} className="shrink-0 sm:contents">
                                     <button
+                                        onClick={() => handleCategoryClick(name)}
                                         className="flex flex-col items-center gap-3 p-4 sm:p-6 bg-gray-50 rounded-2xl border border-gray-100 hover:border-green-200 hover:shadow-md transition-all group
                                                    shrink-0 w-24 sm:w-auto"
                                     >
