@@ -21,6 +21,23 @@ export const useMakeBookings = () => {
 }
 
 
+export const useStartUserChat = () => {
+  const queryClient = useQueryClient()
+
+  const startUserChat = useMutation({
+    mutationFn: async (data: any) => {
+      const token = (await localStorage.getItem("welearnToken")) || ""
+      return post_requests(`chat/start/`, data, token)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["chats"] })
+    },
+  })
+
+  return startUserChat
+}
+
+
 
 
 
@@ -41,5 +58,21 @@ export const useAcceptOrDeclineBooking = (bookingId: string) => {
   })
 
   return makeBookings
+}
+
+export const useCompleteBooking = (bookingId: string) => {
+  const queryClient = useQueryClient()
+
+  const completeBookings = useMutation({
+    mutationFn: async (data: any) => {
+      const token = (await localStorage.getItem("welearnToken")) || ""
+      return patch_requests(`bookings/${bookingId}/complete/`, data, token)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["myBookingsAsTutor"] })
+    },
+  })
+
+  return completeBookings
 }
 

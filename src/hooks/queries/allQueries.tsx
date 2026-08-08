@@ -83,15 +83,48 @@ export const useGetMyBookingsAsUser = () => {
     };
 };
 
+export const useGetChats = () => {
+    const { data, isLoading, isError, isFetched, refetch } = useQuery({
+        queryKey: ["chats"],
+        queryFn: async () => {
+            const token = (await localStorage.getItem("welearnToken")) || "";
+            return get_requests("chat/", token);
+        },
+    });
+
+    return {
+        getChats: data,
+        isLoading,
+        isError,
+        isFetched,
+        refetch,
+    };
+};
 
 
+export const useGetSingleChat = (id: string) => {
+    const { data, isLoading, isError, isFetched, refetch } = useQuery({
+        queryKey: ["chat"],
+        queryFn: async () => {
+            const token = (await localStorage.getItem("welearnToken")) || "";
+            return get_requests(`chats/${id}/`, token);
+        },
+    });
+
+    return {
+        getSingleChat: data,
+        isLoading,
+        isError,
+        isFetched,
+        refetch,
+    };
+};
 
 
 
 
 
 // ========================== EVERYTHING BELOW IS FOR TUTOR PROFILE ==========================
-
 
 // ================ TUTOR PROFILE ================
 export const useGetTutorProfile = () => {
@@ -133,8 +166,6 @@ export const useGetMyBookingsAsTutor = () => {
 };
 
 
-
-// ================ TUTOR PROFILE ================
 export const useGetTutorStats = () => {
     const { data, isLoading, isError, isFetched, refetch } = useQuery({
         queryKey: ["tutorStats"],
@@ -153,5 +184,20 @@ export const useGetTutorStats = () => {
     };
 };
 
+export const useGetBookingById = (id: string) => {
+    const { data, isLoading, isError, isFetched, refetch } = useQuery({
+        queryKey: ["bookingById", id],
+        queryFn: async () => {
+            const token = (await localStorage.getItem("welearnToken")) || "";
+            return get_requests(`bookings/${id}/`, token);
+        },
+    });
 
-
+    return {
+        booking: data,
+        isLoading,
+        isError,
+        isFetched,
+        refetch,
+    };
+};

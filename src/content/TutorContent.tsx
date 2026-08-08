@@ -3,6 +3,7 @@ import TutorBookings from '../pages/tutorDashboard/TutorBookings'
 import TutorMessages from '../pages/tutorDashboard/TutorMessages'
 import TutorOverview from '../pages/tutorDashboard/TutorOverview'
 import TutorProfile from '../pages/tutorDashboard/TutorProfile'
+import TutorSessionDetails from '../pages/tutorDashboard/TutorSessionDetails'
 import TutorWallet from '../pages/tutorDashboard/TutorWallet'
 
 const TutorContent = () => {
@@ -15,6 +16,7 @@ const TutorContent = () => {
                 <Route path='bookings' element={<TutorBookings />} />
                 <Route path='messages' element={<TutorMessages />} />
                 <Route path='profile' element={<TutorProfile />} />
+                <Route path='sessions/:id' element={<TutorSessionDetails />} />
             </Routes>
         </div>
     )

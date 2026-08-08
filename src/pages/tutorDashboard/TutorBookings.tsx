@@ -11,8 +11,10 @@ import {
     FiVideo,
     FiX,
 } from "react-icons/fi";
+import { Link } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import LoadingOverlay from "../../components/LoadingOverlay";
+import { TUTOR_SESSION_ROUTE } from "../../components/SessionActionModal";
 import { useAcceptOrDeclineBooking } from "../../hooks/mutations/allMutation";
 import { useGetMyBookingsAsTutor } from "../../hooks/queries/allQueries";
 import {
@@ -68,7 +70,7 @@ const TutorBookings = () => {
     const tabs = [
         { id: "upcoming", label: "Upcoming", count: tabCounts.upcoming },
         { id: "pending", label: "Pending", count: tabCounts.pending },
-        // { id: "completed", label: "Completed", count: tabCounts.completed },
+        { id: "completed", label: "Completed", count: tabCounts.completed },
         { id: "cancelled", label: "Cancelled", count: tabCounts.cancelled },
     ] as const;
 
@@ -216,15 +218,21 @@ const TutorBookings = () => {
                 )}
 
                 {booking.status === "completed" && (
-                    <button className="w-full px-4 py-3.5 border-2 border-green-700 text-green-700 rounded-full text-xs font-semibold hover:bg-green-50 transition-all">
+                    <Link
+                        to={TUTOR_SESSION_ROUTE(booking.id)}
+                        className="w-full text-center px-4 py-3.5 border-2 border-green-700 text-green-700 rounded-full text-xs font-semibold hover:bg-green-50 transition-all"
+                    >
                         View Summary
-                    </button>
+                    </Link>
                 )}
 
                 {booking.status === "cancelled" && (
-                    <button className="w-full px-4 py-3.5 border border-gray-300 text-gray-500 rounded-full text-xs font-semibold hover:bg-gray-50 transition-all">
+                    <Link
+                        to={TUTOR_SESSION_ROUTE(booking.id)}
+                        className="w-full text-center px-4 py-3.5 border border-gray-300 text-gray-500 rounded-full text-xs font-semibold hover:bg-gray-50 transition-all"
+                    >
                         View Details
-                    </button>
+                    </Link>
                 )}
             </div>
         </div>
@@ -392,13 +400,23 @@ const TutorBookings = () => {
                                             {selectedSession.sessionLink || "No link provided yet."}
                                         </p>
                                     </div>
-                                    <button
-                                        onClick={handleBeginSession}
-                                        className="inline-flex lg:w-fit w-full text-center justify-center items-center gap-2 rounded-full bg-green-700 px-4 py-3.5 text-sm font-semibold text-white hover:bg-green-800 transition-all"
-                                    >
-                                        <FiVideo size={14} />
-                                        Begin Session
-                                    </button>
+                                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                                        <Link
+                                            to={TUTOR_SESSION_ROUTE(selectedSession.id)}
+                                            onClick={() => setSessionDetailsOpen(false)}
+                                            className="inline-flex lg:w-fit w-full text-center justify-center items-center gap-2 rounded-full border border-gray-300 text-gray-700 px-4 py-3.5 text-sm font-semibold hover:bg-gray-50 transition-all"
+                                        >
+                                            <FiExternalLink size={14} />
+                                            View Session Page
+                                        </Link>
+                                        <button
+                                            onClick={handleBeginSession}
+                                            className="inline-flex lg:w-fit w-full text-center justify-center items-center gap-2 rounded-full bg-green-700 px-4 py-3.5 text-sm font-semibold text-white hover:bg-green-800 transition-all"
+                                        >
+                                            <FiVideo size={14} />
+                                            Begin Session
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 

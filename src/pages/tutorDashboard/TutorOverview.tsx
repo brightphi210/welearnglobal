@@ -3,7 +3,6 @@ import {
     FiCalendar,
     FiCheckCircle,
     FiClock,
-    FiDollarSign,
     FiMessageCircle,
     FiStar,
     FiUsers
@@ -15,6 +14,7 @@ import ProfileCompletionModal, {
     getProfileCompletion,
     TUTOR_PROFILE_ROUTE,
 } from "../../components/ProfileCompleModal";
+import SessionActionModal from "../../components/SessionActionModal";
 import { useGetMyBookingsAsTutor, useGetTutorProfile, useGetTutorStats } from "../../hooks/queries/allQueries";
 import {
     formatDisplayDate,
@@ -75,8 +75,20 @@ const TutorOverview = () => {
                 time: `${formatDisplayTime(booking.start_time)}${booking.end_time ? ` - ${formatDisplayTime(booking.end_time)}` : ""}`,
                 type: formatSessionType(booking.session_type),
                 image: booking.student?.profile_image,
+                sessionLink: booking.session_link || "",
             }));
     }, [myBookings]);
+
+    // ── Session action modal (Join Meeting / View Session Page) ──────
+    const [activeSession, setActiveSession] = useState<{ id: string | number; sessionLink?: string } | null>(null);
+
+    const openSessionModal = (session: { id: string | number; sessionLink?: string }) => {
+        setActiveSession(session);
+    };
+
+    const closeSessionModal = () => {
+        setActiveSession(null);
+    };
 
     const stats = [
         {
@@ -95,10 +107,10 @@ const TutorOverview = () => {
         },
         {
             id: 3,
-            label: "Weekly Earnings",
-            value: tutorStatsData?.weekly_earnings,
+            label: "Completed Sessions",
+            value: tutorStatsData?.completed_sessions,
             trendColor: "text-green-600",
-            icon: FiDollarSign,
+            icon: FiCheckCircle,
         },
         {
             id: 4,
@@ -126,7 +138,7 @@ const TutorOverview = () => {
     };
 
     return (
-        <div className="md:pl-56 pb-20 lg:pb-8 pt-0">
+        <div className="md:pl-56 pb-20 lg:pb-8 lg:pt-14 pt-0">
             <LoadingOverlay visible={isLoading || bookingsLoading} />
             <div className="min-h-screen pt-8 bg-gray-50 px-4 sm:px-6 lg:px-8 max-w-7xl m-auto">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
@@ -199,8 +211,11 @@ const TutorOverview = () => {
                                                     <FiMessageCircle size={14} />
                                                     Message
                                                 </button>
-                                                <button className="px-4 lg:w-fit w-full py-2.5 bg-green-700 text-white rounded-full text-sm font-semibold hover:bg-green-800 transition-all">
-                                                    Launch Session
+                                                <button
+                                                    onClick={() => openSessionModal({ id: session.id, sessionLink: session.sessionLink })}
+                                                    className="px-4 lg:w-fit w-full py-2.5 bg-green-700 text-white rounded-full text-sm font-semibold hover:bg-green-800 transition-all"
+                                                >
+                                                    View Session
                                                 </button>
                                             </div>
                                         </div>
@@ -287,6 +302,14 @@ const TutorOverview = () => {
                     onClose={handleCloseCompletionModal}
                 />
             )}
+
+            {/* Session action modal: Join Meeting / View Session Page */}
+            <SessionActionModal
+                open={!!activeSession}
+                onClose={closeSessionModal}
+                sessionId={activeSession?.id || ""}
+                sessionLink={activeSession?.sessionLink}
+            />
         </div>
     );
 };

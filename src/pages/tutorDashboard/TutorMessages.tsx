@@ -1,150 +1,154 @@
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FiArrowLeft, FiFilter, FiMoreVertical, FiPaperclip, FiPhone, FiSearch, FiSend, FiSmile, FiVideo } from "react-icons/fi";
+import { useLocation } from "react-router-dom";
+import { useGetChats, useGetSingleChat } from "../../hooks/queries/allQueries";
 
 const TOP_NAV_HEIGHT = 120;
 const DESKTOP_NAV_HEIGHT = 20;
 const MOBILE_BOTTOM_NAV_HEIGHT = 10;
 
+const WS_BASE_URL = "wss://api.welearnglobal.online/";
+const getAccessToken = () => localStorage.getItem("access_token") || "";
+
+// TODO: replace with the real signed-in tutor's id, e.g. from useAuth()
+const useCurrentUserId = () => {
+  const token = getAccessToken();
+  console.log("Current user token:", token);
+  return null as number | null;
+};
+
+interface ChatThread {
+  id: number;
+  student: number;
+  tutor: number;
+  created_at: string;
+  other_participant_name: string;
+  last_message: string | null;
+  unread_count: number;
+}
+
+interface ChatMessage {
+  id: number;
+  thread: number;
+  sender: number;
+  sender_name: string;
+  content: string;
+  created_at: string;
+  read_at: string | null;
+}
+
+const formatMessageTime = (iso: string) => {
+  if (!iso) return "";
+  return new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+};
+
+const initialsFor = (name: string) =>
+  name
+    ?.split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "?";
+
 const TutorMessages = () => {
-  const [selectedChat, setSelectedChat] = useState<number | null>(null);
+  const location = useLocation() as { state?: { chatId?: number } };
+  const currentUserId = useCurrentUserId();
+
+  const [selectedChat, setSelectedChat] = useState<number | null>(location.state?.chatId ?? null);
   const [messageText, setMessageText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      sender: "tutor",
-      text: "Hi Alex! I've reviewed your last assignment on electromagnetism.",
-      time: "10:15 AM",
-      date: "TODAY, OCTOBER 24",
-    },
-    {
-      id: 2,
-      sender: "user",
-      text: "Thanks Dr. Sarah! I had some trouble with the Faraday's Law problems.",
-      time: "10:20 AM",
-      date: "TODAY, OCTOBER 24",
-    },
-    {
-      id: 3,
-      sender: "tutor",
-      text: "No worries, we can go over that in our next lesson. I've attached a cheat sheet that might help.",
-      time: "10:22 AM",
-      date: "TODAY, OCTOBER 24",
-      attachment: {
-        name: "Faradays_Law_Guide.pdf",
-        type: "pdf",
-      },
-    },
-    {
-      id: 4,
-      sender: "user",
-      text: "Would you like to schedule a 30-minute follow-up this Tuesday?",
-      time: "10:23 AM",
-      date: "TODAY, OCTOBER 24",
-    },
-    {
-      id: 5,
-      sender: "tutor",
-      text: "Absolutely! I have availability. Let me send you a session proposal.",
-      time: "10:25 AM",
-      date: "TODAY, OCTOBER 24",
-      proposal: {
-        date: "Tuesday, Oct 26 • 04:00 PM (1 hr)",
-      },
-    },
+  const [liveMessages, setLiveMessages] = useState<ChatMessage[]>([]);
+  const [socketStatus, setSocketStatus] = useState<"idle" | "connecting" | "open" | "error">("idle");
+  const socketRef = useRef<WebSocket | null>(null);
 
-    {
-      id: 5,
-      sender: "tutor",
-      text: "Absolutely! I have availability. Let me send you a session proposal.",
-      time: "10:25 AM",
-      date: "TODAY, OCTOBER 24",
-      proposal: {
-        date: "Tuesday, Oct 26 • 04:00 PM (1 hr)",
-      },
-    },
+  const { getChats, isLoading: isLoadingChats } = useGetChats();
+  const chats: ChatThread[] = Array.isArray(getChats?.data)
+    ? getChats.data
+    : Array.isArray(getChats)
+      ? getChats
+      : [];
 
-    {
-      id: 5,
-      sender: "tutor",
-      text: "Absolutely! I have availability. Let me send you a session proposal.",
-      time: "10:25 AM",
-      date: "TODAY, OCTOBER 24",
-      proposal: {
-        date: "Tuesday, Oct 26 • 04:00 PM (1 hr)",
-      },
-    },
+  // TODO: confirm useGetSingleChat(id)'s actual return shape/params.
+  const { getSingleChat, isLoading: isLoadingMessages } = useGetSingleChat(selectedChat);
+  const messageHistory: ChatMessage[] = Array.isArray(getSingleChat?.results)
+    ? getSingleChat.results
+    : Array.isArray(getSingleChat?.data?.results)
+      ? getSingleChat.data.results
+      : [];
 
-    {
-      id: 5,
-      sender: "user",
-      text: "Absolutely! I have availability. Let me send you a session proposal.",
-      time: "10:25 AM",
-      date: "TODAY, OCTOBER 24",
-      proposal: {
-        date: "Tuesday, Oct 26 • 04:00 PM (1 hr)",
-      },
-    },
-
-  ]);
-
-  const chats = [
-    {
-      id: 1,
-      name: "Dr. Sarah Jenkins have availability. Let me send you a session proposal",
-      subject: "Advanced Physics",
-      lastMessage: "Absolutely! I have availability. Let me send you a session proposal.",
-      timestamp: "10:25 AM",
-      avatar: "SJ",
-      unread: false,
-      online: true,
-    },
-    {
-      id: 2,
-      name: "Marcus Thompson",
-      subject: "Calculus II",
-      lastMessage: "Does Wednesday at 4 PM work for you?",
-      timestamp: "2 hours ago",
-      avatar: "MT",
-      unread: true,
-      online: false,
-    },
-    {
-      id: 3,
-      name: "Elena Rodriguez",
-      subject: "Spanish Literature",
-      lastMessage: "¡Excelente trabajo! Keep practicing the verb conjugations",
-      timestamp: "Yesterday",
-      avatar: "ER",
-      unread: false,
-      online: false,
-    },
-    {
-      id: 4,
-      name: "James Wilson",
-      subject: "Web Development",
-      lastMessage: "I sent you the GitHub repository link.",
-      timestamp: "3 days ago",
-      avatar: "JW",
-      unread: false,
-      online: false,
-    },
-  ];
+  const filteredChats = useMemo(() => {
+    if (!searchQuery.trim()) return chats;
+    const q = searchQuery.toLowerCase();
+    return chats.filter((c) => c.other_participant_name?.toLowerCase().includes(q));
+  }, [chats, searchQuery]);
 
   const currentChat = chats.find((c) => c.id === selectedChat);
 
+  // Merge REST history with anything that's arrived live over the socket
+  // since opening the thread, de-duped by id.
+  const messages = useMemo(() => {
+    const byId = new Map<number, ChatMessage>();
+    [...messageHistory, ...liveMessages].forEach((m) => byId.set(m.id, m));
+    return Array.from(byId.values()).sort(
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+  }, [messageHistory, liveMessages]);
+
+  // Open a fresh socket whenever the selected thread changes; close it on
+  // cleanup so we never leave a stale connection open while the tutor
+  // browses other chats or navigates away.
+  useEffect(() => {
+    setLiveMessages([]);
+
+    if (selectedChat === null) return;
+
+    setSocketStatus("connecting");
+    const token = getAccessToken();
+    const socket = new WebSocket(`${WS_BASE_URL}/ws/chat/${selectedChat}/?token=${token}`);
+    socketRef.current = socket;
+
+    socket.onopen = () => setSocketStatus("open");
+
+    socket.onmessage = (event) => {
+      try {
+        const incoming: ChatMessage = JSON.parse(event.data);
+        setLiveMessages((prev) => [...prev, incoming]);
+      } catch (err) {
+        console.error("Failed to parse chat socket message:", err);
+      }
+    };
+
+    socket.onerror = () => setSocketStatus("error");
+
+    socket.onclose = (event) => {
+      setSocketStatus("idle");
+      if (event.code === 4001) {
+        // Token missing/invalid/expired.
+        // TODO: refresh the access token and reconnect here.
+        console.warn("Chat socket closed: re-authentication required");
+      } else if (event.code === 4003) {
+        // Not a participant in this thread — don't retry.
+        console.warn("Chat socket closed: not a participant in this thread");
+      }
+    };
+
+    return () => {
+      socket.close();
+      socketRef.current = null;
+    };
+  }, [selectedChat]);
+
   const handleSendMessage = () => {
-    if (messageText.trim()) {
-      const newMessage = {
-        id: messages.length + 1,
-        sender: "user",
-        text: messageText,
-        time: new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
-        date: "TODAY",
-      };
-      setMessages([...messages, newMessage]);
-      setMessageText("");
-    }
+    const trimmed = messageText.trim();
+    if (!trimmed) return;
+
+    const socket = socketRef.current;
+    if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
+    socket.send(JSON.stringify({ content: trimmed }));
+    setMessageText("");
+    // Intentionally not appending optimistically — the server echoes the
+    // message back over the same socket for both participants.
   };
 
   return (
@@ -178,25 +182,34 @@ const TutorMessages = () => {
 
           {/* Scrollable chat items */}
           <div className="flex-1 overflow-y-auto">
-            {chats.map((chat) => (
-              <ChatListItem
-                key={chat.id}
-                chat={chat}
-                // On desktop, highlight chat 1 by default when nothing is selected
-                isActive={(selectedChat ?? 1) === chat.id}
-                onSelect={() => setSelectedChat(chat.id)}
-              />
-            ))}
+            {isLoadingChats ? (
+              <p className="text-xs text-gray-400 italic text-center py-8">Loading conversations...</p>
+            ) : filteredChats.length === 0 ? (
+              <p className="text-xs text-gray-400 italic text-center py-8">No conversations yet</p>
+            ) : (
+              filteredChats.map((chat) => (
+                <ChatListItem
+                  key={chat.id}
+                  chat={chat}
+                  // On desktop, highlight the first chat by default when nothing is selected
+                  isActive={(selectedChat ?? filteredChats[0]?.id) === chat.id}
+                  onSelect={() => setSelectedChat(chat.id)}
+                />
+              ))
+            )}
           </div>
         </div>
 
         <div className="col-span-3 h-full overflow-hidden">
           <ChatWindow
-            currentChat={chats.find((c) => c.id === (selectedChat ?? 1))}
+            currentChat={chats.find((c) => c.id === (selectedChat ?? filteredChats[0]?.id))}
             messages={messages}
+            currentUserId={currentUserId}
             messageText={messageText}
             setMessageText={setMessageText}
             handleSendMessage={handleSendMessage}
+            isLoadingMessages={isLoadingMessages}
+            socketStatus={socketStatus}
           />
         </div>
       </div>
@@ -210,36 +223,43 @@ const TutorMessages = () => {
           <ChatWindow
             currentChat={currentChat}
             messages={messages}
+            currentUserId={currentUserId}
             messageText={messageText}
             setMessageText={setMessageText}
             handleSendMessage={handleSendMessage}
             onBack={() => setSelectedChat(null)}
+            isLoadingMessages={isLoadingMessages}
+            socketStatus={socketStatus}
             isMobile
           />
         ) : (
           /* ── Chat list (default mobile view) ── */
-          <>
-            <div className="flex flex-col bg-white h-full w-full overflow-hidden pt-14">
-              <div className="px-4 py-4 border-b border-gray-100 shrink-0">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Messages</h2>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 relative">
-                    <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                    <input
-                      type="text"
-                      placeholder="Search chats..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100 bg-gray-50 transition-all"
-                    />
-                  </div>
-                  <button className="p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-all">
-                    <FiFilter size={18} />
-                  </button>
+          <div className="flex flex-col bg-white h-full w-full overflow-hidden pt-14">
+            <div className="px-4 py-4 border-b border-gray-100 shrink-0">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">Messages</h2>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 relative">
+                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                  <input
+                    type="text"
+                    placeholder="Search chats..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100 bg-gray-50 transition-all"
+                  />
                 </div>
+                <button className="p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-all">
+                  <FiFilter size={18} />
+                </button>
               </div>
-              <div className="flex-1 overflow-y-auto">
-                {chats.map((chat) => (
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {isLoadingChats ? (
+                <p className="text-xs text-gray-400 italic text-center py-8">Loading conversations...</p>
+              ) : filteredChats.length === 0 ? (
+                <p className="text-xs text-gray-400 italic text-center py-8">No conversations yet</p>
+              ) : (
+                filteredChats.map((chat) => (
                   <ChatListItem
                     key={chat.id}
                     chat={chat}
@@ -247,10 +267,10 @@ const TutorMessages = () => {
                     onSelect={() => setSelectedChat(chat.id)}
                     mobile
                   />
-                ))}
-              </div>
+                ))
+              )}
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>
@@ -258,7 +278,17 @@ const TutorMessages = () => {
 };
 
 // ---------------- Chat list row ----------------
-const ChatListItem = ({ chat, isActive, onSelect, mobile }: any) => (
+const ChatListItem = ({
+  chat,
+  isActive,
+  onSelect,
+  mobile,
+}: {
+  chat: ChatThread;
+  isActive: boolean;
+  onSelect: () => void;
+  mobile?: boolean;
+}) => (
   <button
     onClick={onSelect}
     className={`w-full box-border ${mobile ? "px-4" : "px-8"} py-4 border-b border-gray-50 text-left hover:bg-gray-50 transition-all ${isActive ? "bg-green-50 border-l-4 border-l-green-600" : ""
@@ -267,29 +297,24 @@ const ChatListItem = ({ chat, isActive, onSelect, mobile }: any) => (
     <div className="flex items-start gap-3">
       <div className="relative shrink-0">
         <div className="w-12 h-12 rounded-full bg-green-900 flex items-center justify-center text-white font-semibold text-sm">
-          {chat.avatar}
+          {initialsFor(chat.other_participant_name)}
         </div>
-        {chat.online && (
-          <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-800 rounded-full border-2 border-white shadow-md"></div>
-        )}
       </div>
 
-      <div className="flex-1 ">
+      <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-1 gap-2">
-          <h3 className={`font-semibold text-sm text-gray-900 ${chat.unread ? "font-bold" : ""}`}>
-            {chat.name}
+          <h3 className={`font-semibold text-sm text-gray-900 truncate ${chat.unread_count > 0 ? "font-bold" : ""}`}>
+            {chat.other_participant_name}
           </h3>
-          <span className={`text-xs shrink-0 ${chat.unread ? "text-green-600 font-semibold" : "text-gray-500"}`}>
-            {chat.timestamp}
-          </span>
         </div>
-        <p className="text-xs text-green-600 font-medium mb-1">{chat.subject}</p>
-        <p className={`text-xs w-full ${chat.unread ? "text-gray-900 font-medium" : "text-gray-600"}`}>
-          {chat.lastMessage}
+        <p className={`text-xs w-full truncate ${chat.unread_count > 0 ? "text-gray-900 font-medium" : "text-gray-600"}`}>
+          {chat.last_message || "No messages yet"}
         </p>
       </div>
 
-      {chat.unread && <div className="w-2.5 h-2.5 bg-green-600 rounded-full shrink-0 mt-1"></div>}
+      {chat.unread_count > 0 && (
+        <div className="w-2.5 h-2.5 bg-green-600 rounded-full shrink-0 mt-1"></div>
+      )}
     </div>
   </button>
 );
@@ -298,11 +323,32 @@ const ChatListItem = ({ chat, isActive, onSelect, mobile }: any) => (
 const ChatWindow = ({
   currentChat,
   messages,
+  currentUserId,
   messageText,
   setMessageText,
   handleSendMessage,
   onBack,
-}: any) => {
+  isLoadingMessages,
+  socketStatus,
+}: {
+  currentChat?: ChatThread;
+  messages: ChatMessage[];
+  currentUserId: number | null;
+  messageText: string;
+  setMessageText: (v: string) => void;
+  handleSendMessage: () => void;
+  onBack?: () => void;
+  isLoadingMessages: boolean;
+  socketStatus: "idle" | "connecting" | "open" | "error";
+}) => {
+  if (!currentChat) {
+    return (
+      <div className="flex items-center justify-center h-full bg-gray-50">
+        <p className="text-sm text-gray-400 italic">Select a conversation to start messaging</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col bg-gray-50 h-full overflow-hidden">
       {/* Header */}
@@ -317,27 +363,21 @@ const ChatWindow = ({
               <FiArrowLeft size={20} />
             </button>
           )}
-          <button
-            onClick={onBack}
-            disabled={!onBack}
-            className={`flex items-center gap-3 min-w-0 text-left ${onBack ? "cursor-pointer" : "cursor-default"}`}
-          >
+          <div className="flex items-center gap-3 min-w-0">
             <div className="relative shrink-0">
               <div className="w-10 h-10 rounded-full bg-green-900 flex items-center justify-center text-white font-semibold text-sm">
-                {currentChat?.avatar}
+                {initialsFor(currentChat.other_participant_name)}
               </div>
-              {currentChat?.online && (
-                <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-800 rounded-full border-2 border-white"></div>
-              )}
             </div>
             <div className="min-w-0">
-              {currentChat?.name.length > 20 ?
-                <h2 className="font-bold text-sm text-gray-900">{currentChat?.name.slice(0, 20)}...</h2> :
-                <h2 className="font-bold text-sm text-gray-900">{currentChat?.name}</h2>
-              }
-              <p className="text-xs text-green-600 font-medium">{currentChat?.subject}</p>
+              <h2 className="font-bold text-sm text-gray-900 truncate">
+                {currentChat.other_participant_name}
+              </h2>
+              <p className="text-xs text-gray-500">
+                {socketStatus === "open" ? "Connected" : socketStatus === "connecting" ? "Connecting..." : socketStatus === "error" ? "Connection error" : ""}
+              </p>
             </div>
-          </button>
+          </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <button className="p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-all">
@@ -354,24 +394,32 @@ const ChatWindow = ({
 
       {/* Messages — only scrollable region */}
       <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-6">
-        <div className="space-y-4">
-          {messages.map((msg: any) => (
-            <div key={msg.id} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
-              <div
-                className={`max-w-xs px-4 py-2.5 rounded-2xl ${msg.sender === "user"
-                  ? "bg-green-700 text-white rounded-br-none"
-                  : "bg-gray-100 text-gray-900 rounded-bl-none"
-                  }`}
-              >
-                <p className="text-sm">{msg.text}</p>
-                {msg.attachment && <div className="mt-2 text-xs opacity-75">{msg.attachment.name}</div>}
-                <p className={`text-xs mt-1 ${msg.sender === "user" ? "text-green-100" : "text-gray-600"}`}>
-                  {msg.time}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
+        {isLoadingMessages ? (
+          <p className="text-xs text-gray-400 italic text-center py-8">Loading messages...</p>
+        ) : messages.length === 0 ? (
+          <p className="text-xs text-gray-400 italic text-center py-8">No messages yet — say hello!</p>
+        ) : (
+          <div className="space-y-4">
+            {messages.map((msg) => {
+              const isMine = msg.sender === currentUserId;
+              return (
+                <div key={msg.id} className={`flex ${isMine ? "justify-end" : "justify-start"}`}>
+                  <div
+                    className={`max-w-xs px-4 py-2.5 rounded-2xl ${isMine
+                      ? "bg-green-700 text-white rounded-br-none"
+                      : "bg-gray-100 text-gray-900 rounded-bl-none"
+                      }`}
+                  >
+                    <p className="text-sm">{msg.content}</p>
+                    <p className={`text-xs mt-1 ${isMine ? "text-green-100" : "text-gray-600"}`}>
+                      {formatMessageTime(msg.created_at)}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Input bar */}
