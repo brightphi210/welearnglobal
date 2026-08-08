@@ -107,7 +107,7 @@ export const useGetSingleChat = (id: string) => {
         queryKey: ["chat"],
         queryFn: async () => {
             const token = (await localStorage.getItem("welearnToken")) || "";
-            return get_requests(`chats/${id}/`, token);
+            return get_requests(`chat/${id}/`, token);
         },
     });
 

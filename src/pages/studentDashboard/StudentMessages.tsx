@@ -7,15 +7,8 @@ const TOP_NAV_HEIGHT = 120;
 const DESKTOP_NAV_HEIGHT = 20;
 const MOBILE_BOTTOM_NAV_HEIGHT = 10;
 
-// TODO: point this at wherever your project already builds the API base URL
-// (the same single-source constant used by allQueries/allMutation) and swap
-// http(s) for ws(s) rather than hardcoding it here.
-const WS_BASE_URL = (import.meta as any).env?.VITE_WS_BASE_URL || "ws://localhost:8000";
-
-// TODO: replace with however this app actually stores the access token
-// (e.g. a useAuth() hook or an auth context) — this is just a placeholder
-// read so the socket has something to attach as ?token=
-const getAccessToken = () => localStorage.getItem("access_token") || "";
+const WS_BASE_URL = "wss://api.welearnglobal.online/";
+const getAccessToken = () => localStorage.getItem("welearnToken") || "";
 
 // TODO: replace with the real signed-in student's id, e.g. from useAuth()
 const useCurrentUserId = () => {
@@ -80,13 +73,10 @@ const StudentMessages = () => {
             ? getChats
             : [];
 
-    // TODO: confirm useGetSingleChat(id)'s actual return shape/params.
     const { getSingleChat, isLoading: isLoadingMessages } = useGetSingleChat(selectedChat);
-    const messageHistory: ChatMessage[] = Array.isArray(getSingleChat?.results)
-        ? getSingleChat.results
-        : Array.isArray(getSingleChat?.data?.results)
-            ? getSingleChat.data.results
-            : [];
+    const messageHistory: ChatMessage[] = Array.isArray(getSingleChat?.data?.results)
+        ? getSingleChat.data.results
+        : [];
 
     const filteredChats = useMemo(() => {
         if (!searchQuery.trim()) return chats;
@@ -355,6 +345,7 @@ const ChatWindow = ({
     onBack?: () => void;
     isLoadingMessages: boolean;
     socketStatus: "idle" | "connecting" | "open" | "error";
+    isMobile?: boolean;
 }) => {
     if (!currentChat) {
         return (

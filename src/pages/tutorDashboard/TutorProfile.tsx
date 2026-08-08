@@ -18,8 +18,6 @@ import {
     FiMapPin,
     FiPhone,
     FiPlus,
-    FiShield,
-    FiStar,
     FiTrash2,
     FiUpload,
     FiUser,
@@ -161,55 +159,6 @@ const EmptyState = ({ onCreate }: { onCreate: () => void }) => (
     </div>
 );
 
-/* ─── Verification status modal ──────────────────────────────────────── */
-const VerificationModal = ({ isVerified, verificationStatus, onClose }: { isVerified: boolean; verificationStatus: string; onClose: () => void }) => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-        <div className="relative bg-white rounded-2xl border border-gray-200 shadow-xl max-w-sm w-full p-6 sm:p-7">
-            <button
-                onClick={onClose}
-                className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition-all"
-            >
-                <FiX size={16} />
-            </button>
-
-            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 ${isVerified ? "bg-green-100" : "bg-amber-100"}`}>
-                {isVerified ? (
-                    <FiCheckCircle size={22} className="text-green-700" />
-                ) : (
-                    <FiShield size={22} className="text-amber-600" />
-                )}
-            </div>
-
-            <h3 className="text-lg font-extrabold text-gray-900 mb-1.5">
-                {isVerified ? "You're verified" : "Verification status"}
-            </h3>
-
-            {isVerified ? (
-                <p className="text-sm text-gray-500 leading-relaxed">
-                    Your instructor profile has been verified. Students can see a verified badge on your profile.
-                </p>
-            ) : (
-                <>
-                    <span className="inline-block px-2.5 py-0.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-full text-[11px] font-semibold capitalize mb-3">
-                        {verificationStatus || "pending"}
-                    </span>
-                    <p className="text-sm text-gray-500 leading-relaxed">
-                        Profile is under review and will be verified soon. We'll notify you as soon as the review is complete — no action is needed from you right now.
-                    </p>
-                </>
-            )}
-
-            <button
-                onClick={onClose}
-                className="w-full mt-5 py-2.5 bg-green-700 text-white rounded-full text-sm font-semibold hover:bg-green-800 transition-all"
-            >
-                Got it
-            </button>
-        </div>
-    </div>
-);
-
 /* ─── Read-only profile view ─────────────────────────────────────────── */
 const InfoRow = ({ icon: Icon, label, value }: { icon: any; label: string; value?: string | number }) => {
     if (!value) return null;
@@ -262,214 +211,7 @@ const AvailabilitySummary = ({ availability }: { availability: DayAvailability[]
     );
 };
 
-const ProfileView = ({
-    data, profileImagePreview, bannerImagePreview, onEdit, onViewVerification,
-}: {
-    data: ProfileData; profileImagePreview: string; bannerImagePreview: string; onEdit: () => void; onViewVerification: () => void;
-}) => {
-    const fullName = [data.firstName, data.lastName].filter(Boolean).join(" ") || "Your Name";
-    const initials = [data.firstName?.[0], data.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "?";
-    const rating = Number(data.averageRating) || 0;
 
-    return (
-        <div className="max-w-4xl mx-auto">
-            {/* Verification status bar */}
-            <button
-                onClick={onViewVerification}
-                className={`w-full flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border mb-4 text-left transition-all ${data.isVerified ? "bg-green-50 border-green-200 hover:bg-green-100" : "bg-amber-50 border-amber-200 hover:bg-amber-100"}`}
-            >
-                <div className="flex items-center gap-2.5">
-                    {data.isVerified ? (
-                        <FiCheckCircle size={16} className="text-green-700 shrink-0" />
-                    ) : (
-                        <FiShield size={16} className="text-amber-600 shrink-0" />
-                    )}
-                    <span className={`text-sm font-semibold ${data.isVerified ? "text-green-700" : "text-amber-700"}`}>
-                        {data.isVerified ? "Verified instructor" : "View verification status"}
-                    </span>
-                </div>
-                <span className={`text-[11px] font-semibold capitalize px-2 py-0.5 rounded-full ${data.isVerified ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
-                    {data.isVerified ? "Verified" : data.verificationStatus || "Pending"}
-                </span>
-            </button>
-
-            {/* Header card */}
-            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm mb-6">
-                <div className="relative">
-                    <BannerPreview imageUrl={bannerImagePreview} className="h-32 sm:h-40 w-full" />
-                    <div className="absolute bottom-0 left-5 sm:left-8 translate-y-1/2">
-                        <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-green-950 ring-4 ring-white flex items-center justify-center text-white font-bold text-2xl overflow-hidden">
-                            {profileImagePreview ? (
-                                <img src={profileImagePreview} alt="Profile" className="w-full h-full object-cover" />
-                            ) : (
-                                initials
-                            )}
-                            {data.isVerified && (
-                                <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-600 rounded-full border-2 border-white flex items-center justify-center">
-                                    <FiCheckCircle size={11} className="text-white" />
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                <div className="px-5 sm:px-8 pt-14 sm:pt-16 pb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                    <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900">{fullName}</h2>
-                            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize ${data.isVerified ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
-                                {data.isVerified ? "Verified" : data.verificationStatus || "Pending"}
-                            </span>
-                        </div>
-                        {data.title && <p className="text-sm text-gray-500 mt-1">{data.title}</p>}
-
-                        <div className="flex items-center gap-1 mt-2 flex-wrap">
-                            {[1, 2, 3, 4, 5].map(i => (
-                                <FiStar key={i} size={12} className={i <= Math.round(rating) ? "text-amber-400 fill-amber-400" : "text-gray-200 fill-gray-200"} />
-                            ))}
-                            <span className="text-xs font-bold text-gray-800 ml-1">{rating.toFixed(1)}</span>
-                            <span className="text-xs text-gray-500">({data.totalSessions} session{data.totalSessions === 1 ? "" : "s"})</span>
-                        </div>
-
-                        <div className="flex gap-1.5 mt-3 flex-wrap">
-                            {data.sessionMode !== "onsite" && (
-                                <span className="px-2.5 py-0.5 border border-green-400 text-green-700 rounded-full text-[10px] font-semibold">Online</span>
-                            )}
-                            {data.sessionMode !== "online" && (
-                                <span className="px-2.5 py-0.5 border border-orange-400 text-orange-700 rounded-full text-[10px] font-semibold bg-orange-50">Onsite</span>
-                            )}
-                            {data.hourlyRate && (
-                                <span className="px-2.5 py-0.5 border border-gray-300 text-gray-600 rounded-full text-[10px] font-semibold">${data.hourlyRate}/hr</span>
-                            )}
-                        </div>
-                    </div>
-
-                    <button
-                        onClick={onEdit}
-                        className="flex items-center justify-center gap-2 px-5 py-2.5 bg-green-700 text-white rounded-full text-sm font-semibold hover:bg-green-800 transition-all shrink-0 w-full sm:w-auto"
-                    >
-                        <FiEdit2 size={15} /> Update Profile
-                    </button>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
-                <div className="bg-white rounded-2xl border border-gray-200 p-5">
-                    <InfoRow icon={FiPhone} label="Phone" value={data.phone} />
-                </div>
-                <div className="bg-white rounded-2xl border border-gray-200 p-5">
-                    <InfoRow icon={FiMapPin} label="Location" value={data.location} />
-                </div>
-                <div className="bg-white rounded-2xl border border-gray-200 p-5">
-                    <InfoRow icon={FiGlobe} label="Language" value={data.language} />
-                </div>
-                <div className="bg-white rounded-2xl border border-gray-200 p-5">
-                    <InfoRow icon={FiClock} label="Response time" value={data.responseTime} />
-                </div>
-            </div>
-
-            {/* Bio */}
-            {data.bio && (
-                <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 mb-6">
-                    <SectionTitle icon={FiUser}>Bio</SectionTitle>
-                    <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{data.bio}</p>
-                </div>
-            )}
-
-            {/* Skills */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 mb-6">
-                <SectionTitle icon={FiAward}>Skills</SectionTitle>
-                {data.skills.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                        {data.skills.map(s => (
-                            <span key={s} className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-xs font-semibold">{s}</span>
-                        ))}
-                    </div>
-                ) : (
-                    <p className="text-xs text-gray-400 italic">No skills added yet</p>
-                )}
-            </div>
-
-            {/* Subjects */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 mb-6">
-                <SectionTitle icon={FiBook}>Subjects taught</SectionTitle>
-                {data.subjects.length > 0 ? (
-                    <div className="flex flex-wrap gap-2">
-                        {data.subjects.map(s => (
-                            <span key={s} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 border border-gray-200 text-gray-700 rounded-full text-xs font-semibold">
-                                <FaGraduationCap size={11} className="text-green-700" /> {s}
-                            </span>
-                        ))}
-                    </div>
-                ) : (
-                    <p className="text-xs text-gray-400 italic">No subjects added yet</p>
-                )}
-            </div>
-
-            {/* Availability */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 mb-6">
-                <SectionTitle icon={FiClock}>Weekly availability</SectionTitle>
-                <AvailabilitySummary availability={data.availability} />
-            </div>
-
-            {/* Experience + Education */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
-                <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6">
-                    <SectionTitle icon={FiBriefcase}>Experience</SectionTitle>
-                    {data.experience.length > 0 ? (
-                        <div className="flex flex-col gap-3">
-                            {data.experience.map(e => (
-                                <div key={e.id} className="border-l-2 border-green-200 pl-3">
-                                    <p className="text-sm font-bold text-gray-900">{e.role}</p>
-                                    <p className="text-xs text-green-700 font-semibold">{e.org}{e.period ? ` • ${e.period}` : ""}</p>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="text-xs text-gray-400 italic">No experience added yet</p>
-                    )}
-                </div>
-                <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6">
-                    <SectionTitle icon={FaGraduationCap}>Education</SectionTitle>
-                    {data.education.length > 0 ? (
-                        <div className="flex flex-col gap-3">
-                            {data.education.map(e => (
-                                <div key={e.id} className="border-l-2 border-green-200 pl-3">
-                                    <p className="text-sm font-bold text-gray-900">{e.degree}</p>
-                                    <p className="text-xs text-green-700 font-semibold">{e.school}{e.year ? ` • ${e.year}` : ""}</p>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <p className="text-xs text-gray-400 italic">No education added yet</p>
-                    )}
-                </div>
-            </div>
-
-            {/* Payout */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 mb-10">
-                <SectionTitle icon={FiCreditCard}>Payout method</SectionTitle>
-                {data.bankName || data.accountNumber ? (
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-green-700 flex items-center justify-center shrink-0">
-                            <FiCreditCard size={16} className="text-white" />
-                        </div>
-                        <div className="min-w-0">
-                            <p className="text-sm font-bold text-gray-900 truncate">
-                                {data.bankName || "Bank account"} {data.accountNumber ? `••••${data.accountNumber.slice(-4)}` : ""}
-                            </p>
-                            {data.accountName && <p className="text-xs text-gray-500 truncate">{data.accountName}</p>}
-                        </div>
-                    </div>
-                ) : (
-                    <p className="text-xs text-gray-400 italic">No bank account added yet</p>
-                )}
-            </div>
-        </div>
-    );
-};
-
-/* ─── Reusable input styles ──────────────────────────────────────────── */
 const fieldCls = "flex items-center gap-3 border border-gray-200 rounded-lg px-4 py-3 focus-within:border-green-500 focus-within:ring-2 focus-within:ring-green-100 transition-all bg-white";
 const inpCls = "flex-1 min-w-0 border-none outline-none text-sm text-gray-800 placeholder-gray-400 bg-transparent";
 const baseCls = "w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-green-800  transition-all bg-white";
@@ -485,16 +227,12 @@ const SectionTitle = ({ icon: Icon, children }: { icon: any; children: React.Rea
     </div>
 );
 
-/* ─── Formatting helpers ─────────────────────────────────────────────── */
-// Keeps digits + a single leading "+" for international numbers, strips everything else.
 const formatPhoneInput = (raw: string) => {
     const hasPlus = raw.trim().startsWith("+");
     const digits = raw.replace(/\D/g, "").slice(0, 15);
     return (hasPlus ? "+" : "") + digits;
 };
 
-// Strips non-numeric characters (keeping a single decimal point, max 2 dp) so
-// the stored value is always a clean number string, e.g. "1234.5".
 const sanitizeMoneyInput = (raw: string) => {
     let cleaned = raw.replace(/[^0-9.]/g, "");
     const firstDot = cleaned.indexOf(".");
@@ -772,9 +510,6 @@ const Step1 = ({
     );
 };
 
-/* ─── Mini add-item form (module scope so it never remounts on parent
-     re-renders — was previously nested inside Step2, which recreated it as a
-     brand-new component type on every keystroke and stole input focus) ──── */
 interface MiniFormProps {
     title: string;
     onClose: () => void;
@@ -1262,8 +997,7 @@ function safeParseArray<T extends Record<string, any>>(value: unknown): (T & { i
     return arr.map((item, idx) => ({ ...item, id: typeof item?.id === "number" ? item.id : idx + 1 }));
 }
 
-// Skills come back from the API as a real string[] — but guard for the
-// legacy/alternate case where a backend might send a comma-separated string.
+
 function normalizeSkills(value: unknown): string[] {
     if (Array.isArray(value)) return value.filter(Boolean);
     if (typeof value === "string" && value.trim()) {
@@ -1271,9 +1005,6 @@ function normalizeSkills(value: unknown): string[] {
     }
     return [];
 }
-
-// Trims a "HH:MM:SS" (or already-short "HH:MM") time string down to "HH:MM"
-// for use in <input type="time">.
 const toShortTime = (t: unknown, fallback: string) =>
     typeof t === "string" && t.length >= 5 ? t.slice(0, 5) : fallback;
 
@@ -1292,7 +1023,6 @@ function normalizeAvailability(value: unknown): DayAvailability[] {
 
     if (arr.length === 0) return defaultAvailability;
 
-    // Flat API format: entries look like { day_of_week, start_time, end_time, is_booked }
     if (typeof arr[0]?.day_of_week === "number" || typeof arr[0]?.day_of_week === "string") {
         const grouped: Record<string, TimeSlot[]> = {};
         arr.forEach((item: any) => {
@@ -1354,9 +1084,7 @@ const TutorProfile = () => {
     const [errorMessage, setErrorMessage] = useState("");
     const [data, setData] = useState<ProfileData>(emptyProfileData);
 
-    const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
     const [profileImagePreview, setProfileImagePreview] = useState<string>("");
-    const [bannerImageFile, setBannerImageFile] = useState<File | null>(null);
     const [bannerImagePreview, setBannerImagePreview] = useState<string>("");
 
     const { userProfile, isLoading: isUserLoading } = useGetUserProfile();
@@ -1386,7 +1114,6 @@ const TutorProfile = () => {
             setErrorMessage("Profile image should be less than 5MB");
             return;
         }
-        setProfileImageFile(file);
         setProfileImagePreview(URL.createObjectURL(file));
     };
 
@@ -1395,12 +1122,10 @@ const TutorProfile = () => {
             setErrorMessage("Banner image should be less than 5MB");
             return;
         }
-        setBannerImageFile(file);
         setBannerImagePreview(URL.createObjectURL(file));
     };
 
     const handleBannerImageClear = () => {
-        setBannerImageFile(null);
         setBannerImagePreview("");
     };
 
@@ -1509,8 +1234,6 @@ const TutorProfile = () => {
 
         mutateFn(payload, {
             onSuccess: () => {
-                setBannerImageFile(null);
-                setProfileImageFile(null);
                 setSuccessMessage(hasProfile ? "Profile updated successfully!" : "Profile created successfully!");
                 setTimeout(() => setSuccessMessage(""), 3000);
                 setMode("view");

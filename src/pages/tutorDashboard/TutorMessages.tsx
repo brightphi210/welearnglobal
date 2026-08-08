@@ -8,7 +8,7 @@ const DESKTOP_NAV_HEIGHT = 20;
 const MOBILE_BOTTOM_NAV_HEIGHT = 10;
 
 const WS_BASE_URL = "wss://api.welearnglobal.online/";
-const getAccessToken = () => localStorage.getItem("access_token") || "";
+const getAccessToken = () => localStorage.getItem("welearnToken") || "";
 
 // TODO: replace with the real signed-in tutor's id, e.g. from useAuth()
 const useCurrentUserId = () => {
@@ -68,13 +68,10 @@ const TutorMessages = () => {
       ? getChats
       : [];
 
-  // TODO: confirm useGetSingleChat(id)'s actual return shape/params.
   const { getSingleChat, isLoading: isLoadingMessages } = useGetSingleChat(selectedChat);
-  const messageHistory: ChatMessage[] = Array.isArray(getSingleChat?.results)
-    ? getSingleChat.results
-    : Array.isArray(getSingleChat?.data?.results)
-      ? getSingleChat.data.results
-      : [];
+  const messageHistory: ChatMessage[] = Array.isArray(getSingleChat?.data?.results)
+    ? getSingleChat.data.results
+    : [];
 
   const filteredChats = useMemo(() => {
     if (!searchQuery.trim()) return chats;
@@ -340,6 +337,7 @@ const ChatWindow = ({
   onBack?: () => void;
   isLoadingMessages: boolean;
   socketStatus: "idle" | "connecting" | "open" | "error";
+  isMobile?: boolean;
 }) => {
   if (!currentChat) {
     return (
