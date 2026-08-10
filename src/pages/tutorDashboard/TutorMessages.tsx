@@ -122,10 +122,18 @@ const TutorMessages = () => {
       ? getChats
       : [];
 
-  const { getSingleChat, isLoading: isLoadingMessages } = useGetSingleChat(selectedChat?.toString());
-  const messageHistory: ChatMessage[] = Array.isArray(getSingleChat?.data?.results)
-    ? getSingleChat.data.results
-    : [];
+  const chatId = selectedChat != null ? String(selectedChat) : undefined;
+  const { getSingleChat, isFetching: isLoadingMessages, refetch: refetchMessages } =
+    useGetSingleChat(chatId);
+
+  const raw = getSingleChat?.data;
+  const messageHistory: ChatMessage[] = Array.isArray(raw?.results)
+    ? raw.results
+    : Array.isArray(raw)
+      ? raw
+      : Array.isArray(raw?.messages)
+        ? raw.messages
+        : [];
 
   const filteredChats = useMemo(() => {
     if (!searchQuery.trim()) return chats;
@@ -157,15 +165,12 @@ const TutorMessages = () => {
     );
   }, [messageHistory, liveMessages, selectedChat]);
 
-  // Open a fresh socket whenever the selected thread changes (or a manual
-  // reconnect is requested), with automatic reconnection using capped
-  // exponential backoff, a heartbeat to survive idle-connection timeouts,
-  // and reconnect-on-network-restore / tab-refocus so the app recovers on
-  // its own instead of needing a page reload.
   useEffect(() => {
     setLiveMessages([]);
 
-    if (selectedChat === null) return;
+    if (selectedChat != null) {
+      refetchMessages();
+    }
 
     let cancelled = false;
     let reconnectAttempts = 0;
@@ -297,9 +302,6 @@ const TutorMessages = () => {
       if (!socket) return;
 
       if (socket.readyState === WebSocket.CONNECTING) {
-        // Don't abort a socket mid-handshake — wait for it to open,
-        // then close it right away. Avoids the noisy "closed before
-        // the connection is established" browser warning.
         socket.addEventListener("open", () => socket.close(), { once: true });
       } else {
         socket.close();

@@ -111,8 +111,6 @@ const StudentMessages = () => {
     const [liveMessages, setLiveMessages] = useState<ChatMessage[]>([]);
     const [socketStatus, setSocketStatus] = useState<SocketStatus>("idle");
     const socketRef = useRef<WebSocket | null>(null);
-    // Bumping this forces the connect effect below to run again on demand,
-    // e.g. from the manual "Reconnect" button, without changing selectedChat.
     const [reconnectNonce, setReconnectNonce] = useState(0);
 
     const { getChats, isLoading: isLoadingChats } = useGetChats();
@@ -122,10 +120,18 @@ const StudentMessages = () => {
             ? getChats
             : [];
 
-    const { getSingleChat, isLoading: isLoadingMessages } = useGetSingleChat(selectedChat?.toString());
-    const messageHistory: ChatMessage[] = Array.isArray(getSingleChat?.data?.results)
-        ? getSingleChat.data.results
-        : [];
+    const chatId = selectedChat != null ? String(selectedChat) : undefined;
+    const { getSingleChat, isFetching: isLoadingMessages, refetch: refetchMessages } =
+        useGetSingleChat(chatId);
+
+    const raw = getSingleChat?.data;
+    const messageHistory: ChatMessage[] = Array.isArray(raw?.results)
+        ? raw.results
+        : Array.isArray(raw)
+            ? raw
+            : Array.isArray(raw?.messages)
+                ? raw.messages
+                : [];
 
     const filteredChats = useMemo(() => {
         if (!searchQuery.trim()) return chats;
@@ -133,19 +139,7 @@ const StudentMessages = () => {
         return chats.filter((c) => c.other_participant_name?.toLowerCase().includes(q));
     }, [chats, searchQuery]);
 
-    // Nothing is "selected" until the user actually clicks a thread — on both
-    // mobile AND desktop. No more auto-opening the first chat in the list.
     const currentChat = chats.find((c) => c.id === selectedChat);
-
-    // Merge REST history with anything that's arrived live over the socket
-    // since opening the thread, de-duped by id.
-    //
-    // Crucially, we also filter everything to `thread === selectedChat`. This
-    // is what actually fixes the "messages from the last chat linger until I
-    // refresh" bug: if the chats query briefly serves cached/previous data
-    // while switching threads (very common with react-query + keepPreviousData,
-    // or any caching that isn't perfectly keyed per chat id), those stale rows
-    // get filtered out here instead of flashing on screen in the wrong thread.
     const messages = useMemo(() => {
         if (selectedChat == null) return [];
         const byId = new Map<number, ChatMessage>();
@@ -157,15 +151,12 @@ const StudentMessages = () => {
         );
     }, [messageHistory, liveMessages, selectedChat]);
 
-    // Open a fresh socket whenever the selected thread changes (or a manual
-    // reconnect is requested), with automatic reconnection using capped
-    // exponential backoff, a heartbeat to survive idle-connection timeouts,
-    // and reconnect-on-network-restore / tab-refocus so the app recovers on
-    // its own instead of needing a page reload.
     useEffect(() => {
         setLiveMessages([]);
 
-        if (selectedChat === null) return;
+        if (selectedChat != null) {
+            refetchMessages();
+        }
 
         let cancelled = false;
         let reconnectAttempts = 0;
@@ -324,8 +315,6 @@ const StudentMessages = () => {
         try {
             socket.send(JSON.stringify({ content: trimmed }));
             setMessageText("");
-            // Intentionally not appending optimistically — the server echoes
-            // the message back over the same socket for both participants.
         } catch (err) {
             console.error("Failed to send message:", err);
         }
@@ -367,14 +356,21 @@ const StudentMessages = () => {
                         ) : filteredChats.length === 0 ? (
                             <p className="text-xs text-gray-400 italic text-center py-8">No conversations yet</p>
                         ) : (
-                            filteredChats.map((chat) => (
-                                <ChatListItem
-                                    key={chat.id}
-                                    chat={chat}
-                                    isActive={selectedChat === chat.id}
-                                    onSelect={() => setSelectedChat(chat.id)}
-                                />
-                            ))
+                            filteredChats.map((chat) => {
+                                // console.log('This is student id', chat.id)
+
+                                return (
+                                    <>
+                                        <ChatListItem
+                                            key={chat.id}
+                                            chat={chat}
+                                            isActive={selectedChat === chat.id}
+                                            onSelect={() => setSelectedChat(chat.id)}
+                                        />
+                                    </>
+                                )
+                            }
+                            )
                         )}
                     </div>
                 </div>

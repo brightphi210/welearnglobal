@@ -83,6 +83,8 @@ export const useGetMyBookingsAsUser = () => {
     };
 };
 
+
+
 export const useGetChats = () => {
     const { data, isLoading, isError, isFetched, refetch } = useQuery({
         queryKey: ["chats"],
@@ -102,28 +104,32 @@ export const useGetChats = () => {
 };
 
 
-export const useGetSingleChat = (id: string) => {
-    const { data, isLoading, isError, isFetched, refetch } = useQuery({
-        queryKey: ["chat"],
+export const useGetSingleChat = (id?: string) => {
+    const isValidId = !!id && id !== "undefined" && id !== "null";
+
+    const { data, isLoading, isFetching, isError, isFetched, refetch } = useQuery({
+        queryKey: ["chat", id],
         queryFn: async () => {
+            if (!isValidId) {
+                throw new Error("useGetSingleChat called without a valid id");
+            }
             const token = (await localStorage.getItem("welearnToken")) || "";
             return get_requests(`chat/${id}/messages/`, token);
         },
+        enabled: isValidId,
+        staleTime: 0,
+        refetchOnMount: "always",
     });
 
     return {
         getSingleChat: data,
         isLoading,
+        isFetching,
         isError,
         isFetched,
         refetch,
     };
 };
-
-
-// https://api.welearnglobal.online/api/v1/chat/{id}/messages/
-
-
 
 
 // ========================== EVERYTHING BELOW IS FOR TUTOR PROFILE ==========================
