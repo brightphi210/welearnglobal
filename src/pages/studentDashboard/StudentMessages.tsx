@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FiArrowLeft, FiLoader, FiRefreshCw, FiSearch, FiSend, FiSmile } from "react-icons/fi";
 import { useLocation } from "react-router-dom";
@@ -116,6 +117,7 @@ const getOtherParticipant = (chat: ChatThread): { name: string; profileImage: st
 
 const StudentMessages = () => {
     const location = useLocation() as { state?: { chatId?: number } };
+    const queryClient = useQueryClient();
 
     const [selectedChat, setSelectedChat] = useState<any>(location.state?.chatId ?? null);
     const [messageText, setMessageText] = useState("");
@@ -224,12 +226,27 @@ const StudentMessages = () => {
                 }, HEARTBEAT_INTERVAL_MS);
             };
 
+            // socket.onmessage = (event) => {
+            //     if (cancelled) return;
+            //     try {
+            //         const incoming: ChatMessage = JSON.parse(event.data);
+            //         if (incoming?.id == null) return; // e.g. a pong/ack with no message id
+            //         setLiveMessages((prev) => (prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming]));
+            //     } catch (err) {
+            //         console.error("Failed to parse chat socket message:", err);
+            //     }
+            // };
+
             socket.onmessage = (event) => {
                 if (cancelled) return;
                 try {
                     const incoming: ChatMessage = JSON.parse(event.data);
                     if (incoming?.id == null) return; // e.g. a pong/ack with no message id
                     setLiveMessages((prev) => (prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming]));
+
+                    // Keep the sidebar (last message + unread count) in sync without
+                    // requiring a manual refresh or leaving/returning to the page.
+                    queryClient.invalidateQueries({ queryKey: ["chats"] });
                 } catch (err) {
                     console.error("Failed to parse chat socket message:", err);
                 }
@@ -509,7 +526,7 @@ const ChatListItem = ({
 
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1 gap-2">
-                        <h3 className={`font-semibold text-sm text-gray-900 truncate ${chat.unread_count > 0 ? "font-bold" : ""}`}>
+                        <h3 className={`flex-1 min-w-0 font-semibold text-sm text-gray-900 truncate ${chat.unread_count > 0 ? "font-bold" : ""}`}>
                             {other.name}
                         </h3>
                         <span className={`text-xs shrink-0 ${chat.unread_count > 0 ? "text-green-600 font-semibold" : "text-gray-500"}`}>
@@ -686,14 +703,14 @@ const ChatWindow = ({
 
                                     <div className={`flex flex-col ${isMine ? "items-end" : "items-start"} max-w-[75%]`}>
                                         {!isMine && (
-                                            <span className="text-[11px] text-gray-500 font-medium mb-0.5 px-1 truncate max-w-full">
+                                            <span className="text-[10px] pb-1 italic text-gray-500 font-medium mb-0.5 px-1 truncate max-w-full">
                                                 {senderName}
                                             </span>
                                         )}
                                         <div
                                             className={`px-4 py-2.5 rounded-2xl ${isMine
-                                                ? "bg-green-800 text-white rounded-br-none"
-                                                : "bg-gray-100 text-gray-900 rounded-bl-none"
+                                                ? "bg-green-900 text-white rounded-br-none"
+                                                : "bg-gray-50 text-gray-900 rounded-bl-none"
                                                 }`}
                                         >
                                             <p className="text-sm break-words whitespace-pre-wrap">{msg.content}</p>

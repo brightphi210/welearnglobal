@@ -72,8 +72,8 @@ const DashSideBar = () => {
                         <Link
                             key={link}
                             to={link}
-                            className={`flex flex-col items-center justify-center w-14 h-12 rounded-2xl transition-all ${isActive(link)
-                                ? "bg-green-100 text-green-600"
+                            className={`flex flex-col items-center justify-center w-14 h-12 rounded-lg transition-all ${isActive(link)
+                                ? "bg-green-100 text-green-800"
                                 : "text-white "
                                 }`}
                             title={label}
