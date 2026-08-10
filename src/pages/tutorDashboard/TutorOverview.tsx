@@ -34,6 +34,7 @@ const TutorOverview = () => {
     const { tutorProfile } = useGetTutorProfile();
     const tutor = tutorProfile?.data;
 
+
     const missingFields = getMissingProfileFields(tutor);
     const { percent: profileCompletionPercent, checklist: profileChecklist } = getProfileCompletion(tutor);
 
@@ -57,6 +58,7 @@ const TutorOverview = () => {
     // ── Upcoming sessions (real bookings, same formatting as Bookings page) ──
     const { myBookingsAsTutor, isLoading: bookingsLoading } = useGetMyBookingsAsTutor();
     const myBookings = Array.isArray(myBookingsAsTutor?.data) ? myBookingsAsTutor.data : [];
+    console.log("myBookingsAsTutor", myBookingsAsTutor)
 
     const upcomingSessions = useMemo(() => {
         return myBookings

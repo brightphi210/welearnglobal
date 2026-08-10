@@ -165,7 +165,6 @@ const StartChatModal = ({
     );
 };
 
-/* ─── Chat Started Success Modal ─────────────────────────────────────── */
 const ChatSuccessModal = ({
     onClose,
     onViewMessage,
@@ -382,7 +381,7 @@ const StudentTutorProfile = () => {
     const { tutorData, isLoading } = useGetSingleTutor(id!);
     const tutor = tutorData?.data || null;
 
-    console.log("Tutor data:", tutor);
+    // console.log("Tutor data:", tutor);
 
     const { mutate: makeBookings, isPending: isMakingBookings } = useMakeBookings();
     const { mutate: startChat, isPending: isStartingChat } = useStartUserChat();
@@ -448,8 +447,6 @@ const StudentTutorProfile = () => {
     const isOnsite = tutor.session_status === "onsite" || tutor.session_status === "both";
 
     const firstName = tutor.full_name?.split(" ")[0] || "this mentor";
-
-    // Real availability set by the tutor, grouped and sorted by day
     const availabilitySlots: AvailabilitySlot[] = tutor.availability_slots || [];
     const groupedAvailability = groupSlotsByDay(availabilitySlots);
     const selectedSlot = availabilitySlots.find((s) => s.id === selectedSlotId) || null;
@@ -498,7 +495,8 @@ const StudentTutorProfile = () => {
             {
                 onSuccess: (res: any) => {
                     setShowMessageModal(false);
-                    setStartedChatId(res?.id ?? res?.data?.id ?? null);
+                    setStartedChatId(res?.data?.id);
+                    console.log("Chat started successfully:", res?.data);
                     setShowChatSuccessModal(true);
                 },
                 onError: (err: any) => {

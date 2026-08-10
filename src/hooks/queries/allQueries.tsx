@@ -107,7 +107,7 @@ export const useGetSingleChat = (id: string) => {
         queryKey: ["chat"],
         queryFn: async () => {
             const token = (await localStorage.getItem("welearnToken")) || "";
-            return get_requests(`chat/${id}/`, token);
+            return get_requests(`chat/${id}/messages/`, token);
         },
     });
 
@@ -120,6 +120,8 @@ export const useGetSingleChat = (id: string) => {
     };
 };
 
+
+// https://api.welearnglobal.online/api/v1/chat/{id}/messages/
 
 
 
