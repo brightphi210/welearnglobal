@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FiArrowLeft, FiFilter, FiMoreVertical, FiPaperclip, FiPhone, FiRefreshCw, FiSearch, FiSend, FiSmile, FiVideo } from "react-icons/fi";
+import { FiArrowLeft, FiLoader, FiRefreshCw, FiSearch, FiSend, FiSmile } from "react-icons/fi";
 import { useLocation } from "react-router-dom";
 import { useGetChats, useGetSingleChat } from "../../hooks/queries/allQueries";
 
@@ -30,6 +30,18 @@ const HEARTBEAT_INTERVAL_MS = 25000; // keep idle-timeout proxies/load balancers
 // a token refresh happens elsewhere in the app (e.g. an axios interceptor),
 // before giving up and asking the user to reconnect manually.
 const MAX_AUTH_RETRIES = 2;
+
+// Subtle WhatsApp-style tiled wallpaper for the message thread background.
+// Encoded inline as an SVG data URI so no extra asset/network request is needed.
+const CHAT_BG_PATTERN =
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='%23000000' fill-opacity='0.035'%3E%3Ccircle cx='20' cy='20' r='2.5'/%3E%3Ccircle cx='70' cy='10' r='1.5'/%3E%3Ccircle cx='100' cy='40' r='2'/%3E%3Ccircle cx='40' cy='55' r='1.5'/%3E%3Ccircle cx='10' cy='90' r='2'/%3E%3Ccircle cx='60' cy='95' r='2.5'/%3E%3Ccircle cx='95' cy='100' r='1.5'/%3E%3Ccircle cx='110' cy='70' r='1.5'/%3E%3C/g%3E%3C/svg%3E";
+
+const EMOJI_LIST = [
+    "😀", "😁", "😂", "🤣", "😊", "🙂", "😉", "😍",
+    "😘", "😜", "🤔", "😎", "😴", "😢", "😭", "😡",
+    "👍", "👎", "👏", "🙏", "🔥", "🎉", "❤️", "💯",
+    "✅", "🙌", "😅", "😇", "🥳", "🤗", "😬", "👋",
+];
 
 interface ChatUser {
     id: number;
@@ -329,48 +341,38 @@ const StudentMessages = () => {
             >
                 {/* Chat List */}
                 <div className="flex flex-col bg-white pt-14 border-r border-gray-100 h-full overflow-hidden">
-                    {/* Fixed search/filter header */}
+                    {/* Fixed search header */}
                     <div className="px-8 py-6 border-b border-gray-100 shrink-0">
                         <h2 className="text-2xl font-bold text-gray-900 mb-4">Messages</h2>
-                        <div className="flex items-center gap-2">
-                            <div className="flex-1 relative">
-                                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                                <input
-                                    type="text"
-                                    placeholder="Search chats..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100 bg-gray-50 transition-all"
-                                />
-                            </div>
-                            <button className="p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-all">
-                                <FiFilter size={18} />
-                            </button>
+                        <div className="flex-1 relative">
+                            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                            <input
+                                type="text"
+                                placeholder="Search chats..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100 bg-gray-50 transition-all"
+                            />
                         </div>
                     </div>
 
                     {/* Scrollable chat items */}
                     <div className="flex-1 overflow-y-auto">
                         {isLoadingChats ? (
-                            <p className="text-xs text-gray-400 italic text-center py-8">Loading conversations...</p>
+                            <div className="flex items-center justify-center py-8">
+                                <FiLoader className="animate-spin text-green-700" size={22} />
+                            </div>
                         ) : filteredChats.length === 0 ? (
                             <p className="text-xs text-gray-400 italic text-center py-8">No conversations yet</p>
                         ) : (
-                            filteredChats.map((chat) => {
-                                // console.log('This is student id', chat.id)
-
-                                return (
-                                    <>
-                                        <ChatListItem
-                                            key={chat.id}
-                                            chat={chat}
-                                            isActive={selectedChat === chat.id}
-                                            onSelect={() => setSelectedChat(chat.id)}
-                                        />
-                                    </>
-                                )
-                            }
-                            )
+                            filteredChats.map((chat) => (
+                                <ChatListItem
+                                    key={chat.id}
+                                    chat={chat}
+                                    isActive={selectedChat === chat.id}
+                                    onSelect={() => setSelectedChat(chat.id)}
+                                />
+                            ))
                         )}
                     </div>
                 </div>
@@ -413,25 +415,22 @@ const StudentMessages = () => {
                     <div className="flex flex-col bg-white h-full w-full overflow-hidden pt-14">
                         <div className="px-4 py-4 border-b border-gray-100 shrink-0">
                             <h2 className="text-2xl font-bold text-gray-900 mb-4">Messages</h2>
-                            <div className="flex items-center gap-2">
-                                <div className="flex-1 relative">
-                                    <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                                    <input
-                                        type="text"
-                                        placeholder="Search chats..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100 bg-gray-50 transition-all"
-                                    />
-                                </div>
-                                <button className="p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-all">
-                                    <FiFilter size={18} />
-                                </button>
+                            <div className="flex-1 relative">
+                                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                <input
+                                    type="text"
+                                    placeholder="Search chats..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100 bg-gray-50 transition-all"
+                                />
                             </div>
                         </div>
                         <div className="flex-1 overflow-y-auto">
                             {isLoadingChats ? (
-                                <p className="text-xs text-gray-400 italic text-center py-8">Loading conversations...</p>
+                                <div className="flex items-center justify-center py-8">
+                                    <FiLoader className="animate-spin text-green-700" size={22} />
+                                </div>
                             ) : filteredChats.length === 0 ? (
                                 <p className="text-xs text-gray-400 italic text-center py-8">No conversations yet</p>
                             ) : (
@@ -468,7 +467,7 @@ const Avatar = ({
 
     return (
         <div
-            className="rounded-full shrink-0 overflow-hidden flex items-center justify-center bg-green-900 text-white font-semibold"
+            className="rounded-full shrink-0 overflow-hidden flex items-center justify-center bg-green-950 text-white font-semibold"
             style={{ width: size, height: size, fontSize: Math.max(10, size * 0.35) }}
         >
             {showImage ? (
@@ -506,7 +505,7 @@ const ChatListItem = ({
                 }`}
         >
             <div className="flex items-start gap-3">
-                <Avatar src={other.profileImage} name={other.name} size={48} />
+                <Avatar src={other.profileImage} name={other.name} size={36} />
 
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-1 gap-2">
@@ -529,6 +528,22 @@ const ChatListItem = ({
         </button>
     );
 };
+
+// ---------------- Emoji picker popover ----------------
+const EmojiPicker = ({ onSelect }: { onSelect: (emoji: string) => void }) => (
+    <div className="absolute bottom-12 right-0 w-64 max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-lg shadow-lg p-2 grid grid-cols-8 gap-1 z-30">
+        {EMOJI_LIST.map((emoji) => (
+            <button
+                key={emoji}
+                type="button"
+                onClick={() => onSelect(emoji)}
+                className="text-lg hover:bg-gray-100 rounded p-1 transition-all"
+            >
+                {emoji}
+            </button>
+        ))}
+    </div>
+);
 
 // ---------------- Chat window ----------------
 const ChatWindow = ({
@@ -554,12 +569,26 @@ const ChatWindow = ({
     isMobile?: boolean;
 }) => {
     const messagesEndRef = useRef<HTMLDivElement | null>(null);
+    const emojiWrapperRef = useRef<HTMLDivElement | null>(null);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
     // Keep the thread pinned to the newest message, whenever the message
     // count changes or a different thread is opened.
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
     }, [messages.length, currentChat?.id]);
+
+    // Close the emoji popover on outside click.
+    useEffect(() => {
+        if (!showEmojiPicker) return;
+        const handleClickOutside = (e: MouseEvent) => {
+            if (emojiWrapperRef.current && !emojiWrapperRef.current.contains(e.target as Node)) {
+                setShowEmojiPicker(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [showEmojiPicker]);
 
     if (!currentChat) {
         return (
@@ -580,6 +609,10 @@ const ChatWindow = ({
                 : socketStatus === "error"
                     ? "Connection error"
                     : "Disconnected";
+
+    const handleEmojiSelect = (emoji: string) => {
+        setMessageText(messageText.length < MAX_MESSAGE_LENGTH ? messageText + emoji : messageText);
+    };
 
     return (
         <div className="flex flex-col bg-gray-50 h-full overflow-hidden">
@@ -618,23 +651,21 @@ const ChatWindow = ({
                         </div>
                     </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                    <button className="p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-all">
-                        <FiPhone size={18} />
-                    </button>
-                    <button className="p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-all">
-                        <FiVideo size={18} />
-                    </button>
-                    <button className="p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-all">
-                        <FiMoreVertical size={18} />
-                    </button>
-                </div>
             </div>
 
             {/* Messages — only scrollable region */}
-            <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-6">
+            <div
+                className="flex-1 overflow-y-auto px-4 sm:px-8 py-6"
+                style={{
+                    backgroundColor: "#e9edef",
+                    backgroundImage: `url("${CHAT_BG_PATTERN}")`,
+                    backgroundRepeat: "repeat",
+                }}
+            >
                 {isLoadingMessages ? (
-                    <p className="text-xs text-gray-400 italic text-center py-8">Loading messages...</p>
+                    <div className="flex items-center justify-center py-8">
+                        <FiLoader className="animate-spin text-green-700" size={24} />
+                    </div>
                 ) : messages.length === 0 ? (
                     <p className="text-xs text-gray-400 italic text-center py-8">No messages yet — say hello!</p>
                 ) : (
@@ -686,9 +717,6 @@ const ChatWindow = ({
             {/* Input bar */}
             <div className="px-4 sm:px-8 py-3 border-t border-gray-100 bg-white shrink-0 z-20 bottom-0">
                 <div className="flex items-end gap-3">
-                    <button className="p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-all shrink-0">
-                        <FiPaperclip size={18} />
-                    </button>
                     <div className="flex-1 relative">
                         <input
                             type="text"
@@ -705,11 +733,19 @@ const ChatWindow = ({
                             }}
                             placeholder="Type a message..."
                             maxLength={MAX_MESSAGE_LENGTH}
-                            className="w-full px-4 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100"
+                            className="w-full px-4 py-2.5 pr-10 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-green-400 focus:ring-2 focus:ring-green-100"
                         />
-                        <button className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900 transition-all">
-                            <FiSmile size={18} />
-                        </button>
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2" ref={emojiWrapperRef}>
+                            <button
+                                type="button"
+                                onClick={() => setShowEmojiPicker((v) => !v)}
+                                className="text-gray-600 hover:text-gray-900 transition-all"
+                                aria-label="Insert emoji"
+                            >
+                                <FiSmile size={18} />
+                            </button>
+                            {showEmojiPicker && <EmojiPicker onSelect={handleEmojiSelect} />}
+                        </div>
                     </div>
                     <button
                         onClick={handleSendMessage}

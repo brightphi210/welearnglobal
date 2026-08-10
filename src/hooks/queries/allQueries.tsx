@@ -92,6 +92,8 @@ export const useGetChats = () => {
             const token = (await localStorage.getItem("welearnToken")) || "";
             return get_requests("chat/", token);
         },
+        staleTime: 0,
+        refetchOnMount: "always",
     });
 
     return {
