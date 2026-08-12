@@ -25,7 +25,9 @@ interface BookingDetails {
     subject: string;
     customSubject: string;
     notes: string;
+    duration: number;
 }
+
 
 interface AvailabilitySlot {
     id: number;
@@ -37,7 +39,78 @@ interface AvailabilitySlot {
 
 type SessionType = "online" | "onsite";
 
-const SUBJECT_OPTIONS = ["English", "Maths", "Product Design", "Marketing", "Other"];
+const POPULAR_SUBJECTS = [
+    "English",
+    "Maths",
+    "Computer Science",
+    "Web Development",
+    "Business Studies",
+    "Marketing",
+    "French",
+    "Product Design",
+];
+
+const SUBJECT_OPTIONS = [
+    // Core academics
+    "English",
+    "Maths",
+    "Physics",
+    "Chemistry",
+    "Biology",
+    "History",
+    "Geography",
+    "Literature",
+    "Philosophy",
+
+    // Tech & Computer Science
+    "Computer Science",
+    "Web Development",
+    "Data Science",
+    "Machine Learning",
+    "Cybersecurity",
+    "UI/UX Design",
+    "Mobile App Development",
+    "Cloud Computing",
+
+    // Business & Finance
+    "Business Studies",
+    "Economics",
+    "Accounting",
+    "Finance",
+    "Investing & Stock Markets",
+    "Entrepreneurship",
+    "Marketing",
+    "Project Management",
+
+    // Languages
+    "French",
+    "Spanish",
+    "German",
+    "Mandarin",
+    "Arabic",
+
+    // Creative & Arts
+    "Product Design",
+    "Art & Design",
+    "Music Theory",
+    "Photography",
+    "Creative Writing",
+    "Film & Video Editing",
+
+    // Test Prep & Career
+    "SAT/ACT Prep",
+    "IELTS/TOEFL Prep",
+    "Resume & Interview Coaching",
+    "Public Speaking",
+
+    // Other
+    "Statistics",
+    "Psychology",
+];
+
+const DURATION_OPTIONS = Array.from({ length: 31 }, (_, i) => i + 1);
+
+
 
 // Order days Mon -> Sun so the schedule reads naturally regardless of API order
 const DAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -202,34 +275,48 @@ const ChatSuccessModal = ({
     </div>
 );
 
-/* ─── Booking Details Modal ──────────────────────────────────────────── */
 const BookingDetailsModal = ({
     onClose,
     onSubmit,
     isSubmitting,
     submitError,
+
 }: {
     onClose: () => void;
-    onSubmit: (details: BookingDetails) => void;
+    onSubmit: (details: any) => void;
     isSubmitting: boolean;
     submitError: string | null;
 }) => {
-    const [subject, setSubject] = useState("");
-    const [customSubject, setCustomSubject] = useState("");
-    const [notes, setNotes] = useState("");
+    const [subject, setSubject] = useState<any>("");
+    const [notes, setNotes] = useState<any>("");
+    const [duration, setDuration] = useState<any>(1);
     const [error, setError] = useState("");
+
+    const [showSearch, setShowSearch] = useState(false);
+    const [query, setQuery] = useState("");
+
+    const filteredSubjects = query.trim()
+        ? SUBJECT_OPTIONS.filter((s) => s.toLowerCase().includes(query.trim().toLowerCase()))
+        : SUBJECT_OPTIONS;
+
+    const exactMatch = SUBJECT_OPTIONS.some(
+        (s) => s.toLowerCase() === query.trim().toLowerCase()
+    );
+
+    const selectSubject = (value: string) => {
+        setSubject(value);
+        setShowSearch(false);
+        setQuery("");
+        setError("");
+    };
 
     const handleSubmit = () => {
         if (!subject) {
             setError("Please select a subject");
             return;
         }
-        if (subject === "Other" && !customSubject.trim()) {
-            setError("Please tell us the subject");
-            return;
-        }
         setError("");
-        onSubmit({ subject, customSubject, notes });
+        onSubmit({ subject, notes, duration });
     };
 
     return (
@@ -257,37 +344,116 @@ const BookingDetailsModal = ({
                 </p>
 
                 <div className="flex flex-col gap-5 mb-6">
-                    {/* Subject Tabs */}
+                    {/* Subject */}
                     <div>
                         <label className="block text-xs font-semibold text-gray-800 mb-2">Subject</label>
-                        <div className="flex flex-wrap gap-2">
-                            {SUBJECT_OPTIONS.map((option) => (
-                                <button
-                                    key={option}
-                                    type="button"
-                                    onClick={() => {
-                                        setSubject(option);
-                                        setError("");
-                                    }}
-                                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${subject === option
-                                        ? "bg-green-700 text-white border-green-700"
-                                        : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-green-50 hover:border-green-200"
-                                        }`}
-                                >
-                                    {option}
-                                </button>
-                            ))}
-                        </div>
 
-                        {subject === "Other" && (
-                            <input
-                                type="text"
-                                value={customSubject}
-                                onChange={(e) => setCustomSubject(e.target.value)}
-                                placeholder="Please specify the subject"
-                                className="mt-3 w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400"
-                            />
+                        {!showSearch ? (
+                            <>
+                                <div className="flex flex-wrap gap-2">
+                                    {POPULAR_SUBJECTS.map((option) => (
+                                        <button
+                                            key={option}
+                                            type="button"
+                                            onClick={() => selectSubject(option)}
+                                            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${subject === option
+                                                ? "bg-green-700 text-white border-green-700"
+                                                : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-green-50 hover:border-green-200"
+                                                }`}
+                                        >
+                                            {option}
+                                        </button>
+                                    ))}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setShowSearch(true);
+                                            setQuery(subject && !POPULAR_SUBJECTS.includes(subject) ? subject : "");
+                                        }}
+                                        className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${subject && !POPULAR_SUBJECTS.includes(subject)
+                                            ? "bg-green-700 text-white border-green-700"
+                                            : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-green-50 hover:border-green-200"
+                                            }`}
+                                    >
+                                        {subject && !POPULAR_SUBJECTS.includes(subject) ? subject : "Other"}
+                                    </button>
+                                </div>
+
+                                {subject && !POPULAR_SUBJECTS.includes(subject) && (
+                                    <p className="text-[11px] text-gray-500 mt-2">
+                                        Selected: <span className="font-semibold text-gray-700">{subject}</span>
+                                    </p>
+                                )}
+                            </>
+                        ) : (
+                            <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <input
+                                        type="text"
+                                        value={query}
+                                        onChange={(e) => setQuery(e.target.value)}
+                                        placeholder="Search subjects (e.g. Chemistry, Finance...)"
+                                        autoFocus
+                                        className="flex-1 px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setShowSearch(false);
+                                            setQuery("");
+                                        }}
+                                        className="px-3 py-2.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+
+                                {filteredSubjects.length > 0 && (
+                                    <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto mb-2">
+                                        {filteredSubjects.map((option) => (
+                                            <button
+                                                key={option}
+                                                type="button"
+                                                onClick={() => selectSubject(option)}
+                                                className="px-3 py-1.5 rounded-full text-xs font-semibold border bg-gray-50 text-gray-700 border-gray-200 hover:bg-green-50 hover:border-green-200 transition-all"
+                                            >
+                                                {option}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {query.trim() && !exactMatch && (
+                                    <button
+                                        type="button"
+                                        onClick={() => selectSubject(query.trim())}
+                                        className="w-full text-left px-3 py-2.5 rounded-lg border border-dashed border-green-300 bg-green-50 text-xs font-semibold text-green-700 hover:bg-green-100 transition-all"
+                                    >
+                                        Use "{query.trim()}" as my subject
+                                    </button>
+                                )}
+
+                                {filteredSubjects.length === 0 && !query.trim() && (
+                                    <p className="text-xs text-gray-400 italic">Start typing to search subjects</p>
+                                )}
+                            </div>
                         )}
+                    </div>
+
+                    {/* Duration */}
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-800 mb-2">Duration</label>
+                        <select
+                            value={duration}
+                            onChange={(e) => setDuration(Number(e.target.value))}
+                            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400"
+                        >
+                            {DURATION_OPTIONS.map((day) => (
+                                <option key={day} value={day}>
+                                    {day} {day === 1 ? "day" : "days"}
+                                </option>
+                            ))}
+                        </select>
                     </div>
 
                     {/* Notes */}
@@ -460,6 +626,7 @@ const StudentTutorProfile = () => {
             subject: details.subject === "Other" ? details.customSubject.trim() : details.subject,
             session_type: sessionType,
             notes: details.notes.trim(),
+            duration_days: details.duration,
         };
 
         setBookingError(null);

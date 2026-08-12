@@ -8,6 +8,7 @@ import StudentContent from './content/StudentContent'
 import TutorContent from './content/TutorContent'
 import './index.css'
 import About from './pages/About'
+import ConfirmingPayment from './pages/ConfirmatingPayment'
 import Contact from './pages/Contact'
 import Home from './pages/Home'
 import How from './pages/How'
@@ -28,6 +29,8 @@ const App = () => {
             <Route path="/contact" element={<Contact />} />
             <Route path="/about" element={<About />} />
             <Route path="/how-it-works" element={<How />} />
+            <Route path='confirmation/payment' element={<ConfirmingPayment />} />
+
 
             <Route
               path="/student/dashboard/*"

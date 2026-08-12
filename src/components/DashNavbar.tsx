@@ -46,10 +46,12 @@ const DashNavbar = () => {
 
                     {/* Right Icons */}
                     <div className="flex items-center gap-3 ml-auto">
-                        <button className="relative p-2 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all hidden sm:flex items-center justify-center">
-                            <FiMessageSquare size={20} />
-                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-500 rounded-full"></span>
-                        </button>
+                        <Link to={'/student/dashboard/messages'}>
+                            <button className="relative p-2 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all hidden sm:flex items-center justify-center">
+                                <FiMessageSquare size={20} />
+                                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-emerald-500 rounded-full"></span>
+                            </button>
+                        </Link>
 
                         <button className="relative p-2 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all hidden sm:flex items-center justify-center">
                             <FiBell size={20} />
@@ -65,7 +67,7 @@ const DashNavbar = () => {
                                     {user?.profile_image ? (
                                         <button
                                             onClick={() => setProfileMenuOpen((prev) => !prev)}
-                                            className="w-10 h-10 rounded-full overflow-hidden border border-gray-200 hover:ring-2 hover:ring-emerald-200 transition-all"
+                                            className="w-8 h-8 rounded-full overflow-hidden border border-gray-200 hover:ring-2 hover:ring-emerald-200 transition-all"
                                         >
                                             <img
                                                 src={user.profile_image}
@@ -89,7 +91,7 @@ const DashNavbar = () => {
                                 <div className="absolute right-0 mt-3 w-72 bg-white rounded-xl border border-gray-200 shadow-xl overflow-hidden z-50">
                                     {/* User Info */}
                                     <div className="p-5 flex flex-col items-center text-center border-b border-gray-100">
-                                        <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center text-emerald-950 font-bold text-xl mb-3 ring-4 ring-emerald-50">
+                                        <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center text-emerald-950 font-bold text-xl mb-3 ring-4 ring-emerald-50">
                                             {user?.profile_image ? (
                                                 <img
                                                     src={user.profile_image}
@@ -107,17 +109,17 @@ const DashNavbar = () => {
                                     </div>
 
                                     {/* Actions */}
-                                    <div className="p-3 flex flex-col gap-2">
+                                    <div className="p-3 flex gap-2 mb-2">
                                         <Link
                                             to="/student/dashboard/profile"
                                             onClick={() => setProfileMenuOpen(false)}
-                                            className="block w-full text-center px-4 py-2.5 bg-emerald-900 text-white rounded-full font-semibold text-sm hover:bg-green-900 transition-all"
+                                            className="block w-full text-center px-4 py-2.5 bg-emerald-900 text-white rounded-full font-semibold text-xs hover:bg-green-900 transition-all"
                                         >
                                             View Profile
                                         </Link>
                                         <button
                                             onClick={handleLogout}
-                                            className="flex items-center bg-gray-100 justify-center gap-2 w-full text-center px-4 py-2.5 border border-gray-200 text-gray-700 rounded-full font-semibold text-sm hover:bg-gray-50 hover:text-red-600 hover:border-red-200 transition-all"
+                                            className="flex items-center bg-gray-100 justify-center gap-2 w-full text-center px-4 py-2.5 border border-gray-200 text-gray-700 rounded-full font-semibold text-xs hover:bg-gray-50 hover:text-red-600 hover:border-red-200 transition-all"
                                         >
                                             <FiLogOut size={16} />
                                             Log Out
@@ -128,7 +130,7 @@ const DashNavbar = () => {
                         </div>
 
                         <button
-                            className="text-2xl bg-gray-200 rounded-full p-2 justify-center items-center lg:hidden flex"
+                            className="text-xl bg-gray-200 rounded-full p-2 justify-center items-center lg:hidden flex"
                         >
                             <IoNotificationsOutline />
                         </button>

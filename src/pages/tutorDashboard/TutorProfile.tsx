@@ -11,7 +11,6 @@ import {
     FiClock,
     FiCreditCard,
     FiDollarSign,
-    FiEdit2,
     FiGlobe,
     FiImage,
     FiLock,
@@ -24,7 +23,7 @@ import {
     FiX
 } from "react-icons/fi";
 import LoadingOverlay from "../../components/LoadingOverlay";
-import { useCreateTutorProfile, useUpdateTutorProfile } from "../../hooks/mutations/auth";
+import { useUpdateTutorProfile } from "../../hooks/mutations/auth";
 import { useGetTutorProfile, useGetUserProfile } from "../../hooks/queries/allQueries";
 
 /* ─── Types ──────────────────────────────────────────────────────────── */
@@ -35,8 +34,8 @@ type Step = 1 | 2 | 3 | 4;
 // edit   -> the multi-step wizard, used for both first-time creation and updates
 type PageMode = "empty" | "view" | "edit";
 
-interface ExperienceItem { id: number; role: string; org: string; period: string; }
-interface EducationItem { id: number; degree: string; school: string; year: string; }
+interface ExperienceItem { id: number; title: string; company: string; description: string; }
+interface EducationItem { id: number; degree: string; institution: string; description: string; }
 
 interface TimeSlot { id: number; startTime: string; endTime: string; isBooked?: boolean; }
 interface DayAvailability { day: string; enabled: boolean; slots: TimeSlot[]; }
@@ -172,7 +171,7 @@ const Label = ({ children }: { children: React.ReactNode }) => (
 const SectionTitle = ({ icon: Icon, children }: { icon: any; children: React.ReactNode }) => (
     <div className="flex items-center gap-2 mb-4">
         <Icon size={16} className="text-green-700 shrink-0" />
-        <h3 className="text-base font-bold text-gray-900">{children}</h3>
+        <h3 className="text-sm font-bold text-gray-900">{children}</h3>
     </div>
 );
 
@@ -295,7 +294,7 @@ const Step1 = ({
                 <Label>Profile photo</Label>
                 <div className="flex items-center gap-4">
                     <div className="relative shrink-0">
-                        <div className="w-16 h-16 rounded-xl bg-green-950 flex items-center justify-center text-white font-bold text-lg ring-4 ring-gray-100 overflow-hidden">
+                        <div className="w-16 h-16 rounded-xl bg-green-950 flex items-center justify-center text-white font-bold text-sm ring-4 ring-gray-100 overflow-hidden">
                             {profileImagePreview ? (
                                 <img src={profileImagePreview} alt="Profile" className="w-full h-full object-cover" />
                             ) : (
@@ -651,8 +650,8 @@ const Step2 = ({ data, setData, disabled }: { data: ProfileData; setData: (d: Pr
     const [showEduForm, setShowEduForm] = useState(false);
     const [subjectPick, setSubjectPick] = useState("");
 
-    const [newExp, setNewExp] = useState<Omit<ExperienceItem, "id">>({ role: "", org: "", period: "" });
-    const [newEdu, setNewEdu] = useState<Omit<EducationItem, "id">>({ degree: "", school: "", year: "" });
+    const [newExp, setNewExp] = useState<Omit<ExperienceItem, "id">>({ title: "", company: "", description: "" });
+    const [newEdu, setNewEdu] = useState<Omit<EducationItem, "id">>({ degree: "", institution: "", description: "" });
 
     const nextId = (items: { id: number }[]) => (items.length ? Math.max(...items.map(i => i.id)) + 1 : 1);
 
@@ -666,17 +665,17 @@ const Step2 = ({ data, setData, disabled }: { data: ProfileData; setData: (d: Pr
     const removeSubject = (s: string) => setData({ ...data, subjects: data.subjects.filter(x => x !== s) });
 
     const addExp = () => {
-        if (!newExp.role || !newExp.org) return;
+        if (!newExp.title || !newExp.company) return;
         setData({ ...data, experience: [...data.experience, { ...newExp, id: nextId(data.experience) }] });
-        setNewExp({ role: "", org: "", period: "" });
+        setNewExp({ title: "", company: "", description: "" });
         setShowExpForm(false);
     };
     const removeExp = (id: number) => setData({ ...data, experience: data.experience.filter(e => e.id !== id) });
 
     const addEdu = () => {
-        if (!newEdu.degree || !newEdu.school) return;
+        if (!newEdu.degree || !newEdu.institution) return;
         setData({ ...data, education: [...data.education, { ...newEdu, id: nextId(data.education) }] });
-        setNewEdu({ degree: "", school: "", year: "" });
+        setNewEdu({ degree: "", institution: "", description: "" });
         setShowEduForm(false);
     };
     const removeEdu = (id: number) => setData({ ...data, education: data.education.filter(e => e.id !== id) });
@@ -779,8 +778,8 @@ const Step2 = ({ data, setData, disabled }: { data: ProfileData; setData: (d: Pr
                         {data.experience.map(e => (
                             <div key={e.id} className="flex items-start justify-between gap-2 bg-white rounded-xl border border-gray-200 p-3">
                                 <div className="min-w-0">
-                                    <p className="text-sm font-bold text-gray-900 leading-tight truncate">{e.role}</p>
-                                    <p className="text-xs text-green-700 font-semibold mt-0.5 truncate">{e.org}{e.period ? ` • ${e.period}` : ""}</p>
+                                    <p className="text-sm font-bold text-gray-900 leading-tight truncate">{e.title}</p>
+                                    <p className="text-xs text-green-700 font-semibold mt-0.5 truncate">{e.company}{e.description ? ` • ${e.description}` : ""}</p>
                                 </div>
                                 <button onClick={() => removeExp(e.id)} className="p-1 text-gray-300 hover:text-red-400 transition-colors shrink-0">
                                     <FiTrash2 size={12} />
@@ -794,13 +793,13 @@ const Step2 = ({ data, setData, disabled }: { data: ProfileData; setData: (d: Pr
 
                     {showExpForm && (
                         <MiniForm title="Add experience" onClose={() => setShowExpForm(false)} onAdd={addExp}
-                            disabled={!newExp.role || !newExp.org}>
+                            disabled={!newExp.title || !newExp.company}>
                             <input className={baseCls} placeholder="Role / title e.g. Senior Math Tutor"
-                                value={newExp.role} onChange={e => setNewExp(prev => ({ ...prev, role: e.target.value }))} />
+                                value={newExp.title} onChange={e => setNewExp(prev => ({ ...prev, title: e.target.value }))} />
                             <input className={baseCls} placeholder="Organisation e.g. WeLearnGlobal"
-                                value={newExp.org} onChange={e => setNewExp(prev => ({ ...prev, org: e.target.value }))} />
-                            <input className={baseCls} placeholder="Period e.g. 2021 – Present"
-                                value={newExp.period} onChange={e => setNewExp(prev => ({ ...prev, period: e.target.value }))} />
+                                value={newExp.company} onChange={e => setNewExp(prev => ({ ...prev, company: e.target.value }))} />
+                            <input className={baseCls} placeholder="Period / description e.g. 2021 – Present"
+                                value={newExp.description} onChange={e => setNewExp(prev => ({ ...prev, description: e.target.value }))} />
                         </MiniForm>
                     )}
                 </div>
@@ -820,7 +819,7 @@ const Step2 = ({ data, setData, disabled }: { data: ProfileData; setData: (d: Pr
                             <div key={e.id} className="flex items-start justify-between gap-2 bg-white rounded-xl border border-gray-200 p-3">
                                 <div className="min-w-0">
                                     <p className="text-sm font-bold text-gray-900 leading-tight truncate">{e.degree}</p>
-                                    <p className="text-xs text-green-700 font-semibold mt-0.5 truncate">{e.school}{e.year ? ` • ${e.year}` : ""}</p>
+                                    <p className="text-xs text-green-700 font-semibold mt-0.5 truncate">{e.institution}{e.description ? ` • ${e.description}` : ""}</p>
                                 </div>
                                 <button onClick={() => removeEdu(e.id)} className="p-1 text-gray-300 hover:text-red-400 transition-colors shrink-0">
                                     <FiTrash2 size={12} />
@@ -834,13 +833,13 @@ const Step2 = ({ data, setData, disabled }: { data: ProfileData; setData: (d: Pr
 
                     {showEduForm && (
                         <MiniForm title="Add education" onClose={() => setShowEduForm(false)} onAdd={addEdu}
-                            disabled={!newEdu.degree || !newEdu.school}>
+                            disabled={!newEdu.degree || !newEdu.institution}>
                             <input className={baseCls} placeholder="Degree e.g. PhD in Theoretical Mathematics"
                                 value={newEdu.degree} onChange={e => setNewEdu(prev => ({ ...prev, degree: e.target.value }))} />
                             <input className={baseCls} placeholder="School e.g. Cambridge University"
-                                value={newEdu.school} onChange={e => setNewEdu(prev => ({ ...prev, school: e.target.value }))} />
-                            <input className={baseCls} placeholder="Year e.g. 2014"
-                                value={newEdu.year} onChange={e => setNewEdu(prev => ({ ...prev, year: e.target.value }))} />
+                                value={newEdu.institution} onChange={e => setNewEdu(prev => ({ ...prev, institution: e.target.value }))} />
+                            <input className={baseCls} placeholder="Description e.g. Graduated 2014"
+                                value={newEdu.description} onChange={e => setNewEdu(prev => ({ ...prev, description: e.target.value }))} />
                         </MiniForm>
                     )}
                 </div>
@@ -876,7 +875,7 @@ const Step4 = ({ data, setData }: { data: ProfileData; setData: (d: ProfileData)
             <div className="space-y-5">
 
                 <div>
-                    <label className="block text-sm font-semibold text-gray-800 mb-2">Account holder name <span className="text-gray-400 font-normal">(optional, for your reference)</span></label>
+                    <label className="block text-sm font-semibold text-gray-800 mb-2">Account holder name</label>
                     <div className={fieldCls}>
                         <FiUser size={15} className="text-gray-400 shrink-0" />
                         <input className={inpCls} placeholder="Full legal name as it appears on your bank account"
@@ -1023,6 +1022,52 @@ const emptyProfileData: ProfileData = {
     isVerified: false, verificationStatus: "pending",
 };
 
+/* ─── Step validation ────────────────────────────────────────────────
+   Each function returns null when the step's fields are all filled in,
+   or a short human-readable error message describing what's missing. */
+const validateStep1 = (d: ProfileData): string | null => {
+    if (!d.title.trim()) return "Please add your professional title.";
+    if (!d.phone.trim()) return "Please add your phone number.";
+    if (!d.bio.trim()) return "Please add a bio.";
+    if (d.bio.trim().length < 100) return "Your bio should be at least 100 characters.";
+    if (d.skills.length === 0) return "Please add at least one skill.";
+    if (!d.location.trim()) return "Please add your location.";
+    if (!d.language.trim()) return "Please select a language.";
+    if (!d.responseTime.trim()) return "Please select a response time.";
+    return null;
+};
+
+const validateStep2 = (d: ProfileData): string | null => {
+    if (d.subjects.length === 0) return "Please add at least one subject you teach.";
+    if (!d.hourlyRate || Number(d.hourlyRate) <= 0) return "Please enter a valid hourly rate.";
+    if (d.experience.length === 0) return "Please add at least one experience entry.";
+    if (d.education.length === 0) return "Please add at least one education entry.";
+    return null;
+};
+
+const validateStep3 = (d: ProfileData): string | null => {
+    const hasSlot = d.availability.some(day => day.enabled && day.slots.length > 0);
+    if (!hasSlot) return "Please set availability for at least one day.";
+    return null;
+};
+
+const validateStep4 = (d: ProfileData): string | null => {
+    if (!d.accountName.trim()) return "Please add the account holder name.";
+    if (!d.bankName.trim()) return "Please add your bank name.";
+    if (!d.accountNumber.trim()) return "Please add your account number.";
+    return null;
+};
+
+const getStepError = (step: Step, d: ProfileData): string | null => {
+    switch (step) {
+        case 1: return validateStep1(d);
+        case 2: return validateStep2(d);
+        case 3: return validateStep3(d);
+        case 4: return validateStep4(d);
+        default: return null;
+    }
+};
+
 /* ─── Main ───────────────────────────────────────────────────────────── */
 const TutorProfile = () => {
     const [mode, setMode] = useState<PageMode>("view");
@@ -1045,9 +1090,8 @@ const TutorProfile = () => {
     console.log("TutorProfile: tutor", tutor);
 
     const hasProfile = !!tutor;
-    const { mutate: createTutorProfile, isPending: isCreating } = useCreateTutorProfile();
     const { mutate: updateTutorProfile, isPending: isUpdating } = useUpdateTutorProfile();
-    const isPending = isCreating || isUpdating;
+    const isPending = isUpdating;
 
     const isLoading = isUserLoading || isTutorLoading;
 
@@ -1058,11 +1102,15 @@ const TutorProfile = () => {
         }
     }, [isTutorLoading, hasProfile]);
 
+    const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+    const [bannerImageFile, setBannerImageFile] = useState<File | null>(null);
+
     const handleProfileImageChange = (file: File) => {
         if (file.size > 5 * 1024 * 1024) {
             setErrorMessage("Profile image should be less than 5MB");
             return;
         }
+        setProfileImageFile(file);
         setProfileImagePreview(URL.createObjectURL(file));
     };
 
@@ -1071,10 +1119,12 @@ const TutorProfile = () => {
             setErrorMessage("Banner image should be less than 5MB");
             return;
         }
+        setBannerImageFile(file);
         setBannerImagePreview(URL.createObjectURL(file));
     };
 
     const handleBannerImageClear = () => {
+        setBannerImageFile(null);
         setBannerImagePreview("");
     };
 
@@ -1119,7 +1169,7 @@ const TutorProfile = () => {
             availability: availabilitySource !== undefined
                 ? normalizeAvailability(availabilitySource)
                 : prev.availability,
-            accountName: paymentInfo.account_holder_name ?? prev.accountName,
+            accountName: paymentInfo.account_name ?? prev.accountName,
             bankName: paymentInfo.bank_name ?? prev.bankName,
             accountNumber: paymentInfo.account_number ?? prev.accountNumber,
             averageRating: tutor.average_rating ?? prev.averageRating,
@@ -1133,10 +1183,10 @@ const TutorProfile = () => {
         if (tutor.profile_image) setProfileImagePreview(prev => prev || tutor.profile_image);
     }, [tutor]);
 
-    const isStep1Done = !!(data.title);
-    const isStep2Done = data.subjects.length > 0 && !!data.hourlyRate;
-    const isStep3Done = data.availability.some(d => d.enabled && d.slots.length > 0);
-    const isStep4Done = !!(data.bankName && data.accountNumber);
+    const isStep1Done = !validateStep1(data);
+    const isStep2Done = !validateStep2(data);
+    const isStep3Done = !validateStep3(data);
+    const isStep4Done = !validateStep4(data);
     const pct = Math.round([isStep1Done, isStep2Done, isStep3Done, isStep4Done].filter(Boolean).length / 4 * 100);
 
     // Build the availability payload in the backend's expected shape:
@@ -1158,16 +1208,25 @@ const TutorProfile = () => {
         const hourlyRate = Number.isFinite(parsedRate) ? parsedRate : 0;
 
         const availabilityPayload = buildAvailabilityPayload();
+
         const payload = {
+            professional_title: data.title,
+            phone_number: data.phone,
             bio: data.bio,
-            hourly_rate: String(hourlyRate),
-            teaching_mode: data.sessionMode,
-            years_of_experience: data.experience.length,
+            skills: data.skills,
+            location: data.location,
+            language: data.language,
+            session_status: data.sessionMode,
+            subjects: data.subjects,
+            hourly_rate: hourlyRate,
+            experience: data.experience.map(({ id, ...rest }) => rest),
+            education: data.education.map(({ id, ...rest }) => rest),
+            availability: availabilityPayload,
             payment_info: {
+                account_name: data.accountName,
                 bank_name: data.bankName,
                 account_number: data.accountNumber,
             },
-            availability: availabilityPayload,
         };
 
         console.log("TutorProfile availability payload:", availabilityPayload);
@@ -1176,12 +1235,25 @@ const TutorProfile = () => {
         return payload;
     };
 
+    function toFormData(payload: Record<string, any>, profileImageFile: File | null, bannerImageFile: File | null) {
+        const fd = new FormData();
+        Object.entries(payload).forEach(([key, value]) => {
+            if (value === undefined || value === null) return;
+            fd.append(key, typeof value === "object" ? JSON.stringify(value) : String(value));
+        });
+        if (profileImageFile) fd.append("profile_image", profileImageFile);
+        if (bannerImageFile) fd.append("banner", bannerImageFile);
+        return fd;
+    }
+
     const handleSave = () => {
         setErrorMessage("");
         const payload = buildPayload();
-        const mutateFn = hasProfile ? updateTutorProfile : createTutorProfile;
 
-        mutateFn(payload, {
+        const hasNewImage = !!profileImageFile || !!bannerImageFile;
+        const body: any = hasNewImage ? toFormData(payload, profileImageFile, bannerImageFile) : payload;
+
+        updateTutorProfile(body, {
             onSuccess: () => {
                 setSuccessMessage(hasProfile ? "Profile updated successfully!" : "Profile created successfully!");
                 setTimeout(() => setSuccessMessage(""), 3000);
@@ -1197,14 +1269,49 @@ const TutorProfile = () => {
         });
     };
 
+    // Validates every step before submitting. If any step is incomplete,
+    // jumps to the first incomplete step and shows the relevant error.
+    const handlePublish = () => {
+        for (let s = 1; s <= 4; s++) {
+            const err = getStepError(s as Step, data);
+            if (err) {
+                setErrorMessage(err);
+                setStep(s as Step);
+                return;
+            }
+        }
+        handleSave();
+    };
+
+    // Moves forward only if the current step is fully filled in.
+    const goNext = () => {
+        const err = getStepError(step, data);
+        if (err) {
+            setErrorMessage(err);
+            return;
+        }
+        setErrorMessage("");
+        setStep(s => Math.min(4, s + 1) as Step);
+    };
+
+    // Jumping directly to a step (via sidebar nav or dots) is only allowed
+    // once every step before it has been fully filled in.
+    const goToStep = (target: Step) => {
+        for (let s = 1; s < target; s++) {
+            const err = getStepError(s as Step, data);
+            if (err) {
+                setErrorMessage(err);
+                setStep(s as Step);
+                return;
+            }
+        }
+        setErrorMessage("");
+        setStep(target);
+    };
+
     const handleStartCreate = () => {
         setStep(1);
         setMode("edit");
-    };
-
-    const handleCancelEdit = () => {
-        setErrorMessage("");
-        setMode(hasProfile ? "view" : "empty");
     };
 
     if (isLoading) {
@@ -1242,18 +1349,6 @@ const TutorProfile = () => {
                         </div>
                         <p className="text-sm text-gray-500">{pct}% complete · {pct < 100 ? "Keep going to boost your visibility" : "Your profile is fully set up"}</p>
                     </div>
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                        {hasProfile && (
-                            <button onClick={handleCancelEdit} disabled={isPending}
-                                className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all shrink-0 border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50">
-                                Cancel
-                            </button>
-                        )}
-                        <button onClick={handleSave} disabled={isPending}
-                            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all shrink-0 bg-green-700 text-white hover:bg-green-800 disabled:opacity-50 flex-1 sm:flex-none">
-                            <FiEdit2 size={15} /> {isPending ? "Saving..." : hasProfile ? "Save Changes" : "Create Profile"}
-                        </button>
-                    </div>
                 </div>
 
                 {/* Success / Error banners */}
@@ -1273,22 +1368,14 @@ const TutorProfile = () => {
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
-                    {/* ── Left sidebar (step nav only — live preview removed) ── */}
+                    {/* ── Left sidebar (step nav only) ── */}
                     <div className="lg:col-span-1 flex flex-col gap-5 lg:sticky lg:top-8 order-2 lg:order-1">
                         <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5">
-                            {/* Progress */}
-                            <div className="flex items-center gap-3 mb-5">
-                                <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                    <div className="h-full bg-green-600 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
-                                </div>
-                                <span className="text-xs font-bold text-gray-500 shrink-0">{pct}%</span>
-                            </div>
-
                             {STEPS.map(s => {
                                 const done = s.id === 1 ? isStep1Done : s.id === 2 ? isStep2Done : s.id === 3 ? isStep3Done : isStep4Done;
                                 const active = step === s.id;
                                 return (
-                                    <button key={s.id} onClick={() => setStep(s.id as Step)}
+                                    <button key={s.id} onClick={() => goToStep(s.id as Step)}
                                         className={`w-full flex items-center gap-3 px-3 py-3.5 rounded-xl text-left transition-all mb-1 ${active ? "bg-green-50 border border-green-200" : "hover:bg-gray-50"}`}>
                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-all ${done ? "bg-green-700 text-white" : active ? "bg-white text-green-700 border-2 border-green-700" : "bg-gray-100 text-gray-500"}`}>
                                             {done ? <FiCheckCircle size={14} /> : s.id}
@@ -1333,18 +1420,18 @@ const TutorProfile = () => {
                                 {/* Dot indicators */}
                                 <div className="flex items-center gap-2 order-3 sm:order-2 w-full sm:w-auto justify-center">
                                     {STEPS.map(s => (
-                                        <button key={s.id} onClick={() => setStep(s.id as Step)}
+                                        <button key={s.id} onClick={() => goToStep(s.id as Step)}
                                             className={`rounded-full transition-all ${step === s.id ? "w-6 h-2 bg-green-700" : "w-2 h-2 bg-gray-200 hover:bg-gray-300"}`} />
                                     ))}
                                 </div>
 
                                 {step < 4 ? (
-                                    <button onClick={() => setStep(s => (s + 1) as Step)}
+                                    <button onClick={goNext}
                                         className="flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-green-700 text-white rounded-full text-sm font-semibold hover:bg-green-800 transition-all order-2 sm:order-3">
                                         Continue <FiArrowRight size={14} />
                                     </button>
                                 ) : (
-                                    <button onClick={handleSave} disabled={isPending}
+                                    <button onClick={handlePublish} disabled={isPending}
                                         className="flex items-center gap-2 px-5 sm:px-6 py-2.5 rounded-full text-sm font-semibold transition-all bg-green-700 text-white hover:bg-green-800 disabled:opacity-50 order-2 sm:order-3">
                                         {isPending
                                             ? (hasProfile ? "Saving..." : "Publishing...")
