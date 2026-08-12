@@ -265,7 +265,7 @@ const TutorBookings = () => {
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${activeTab === tab.id
+                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${activeTab === tab.id
                                 ? "bg-green-700 text-white"
                                 : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
                                 }`}

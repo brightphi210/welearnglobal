@@ -147,7 +147,7 @@ const TutorOverview = () => {
                     <div>
                         <h1 className="text-3xl font-extrabold text-gray-900 mb-1">Dashboard</h1>
                         <p className="text-gray-600 text-sm">
-                            Welcome back, Dr. Aris! Here's what's happening with your students today.
+                            Welcome back, Great Tutor.
                         </p>
                     </div>
                 </div>
@@ -195,27 +195,27 @@ const TutorOverview = () => {
                                                 <div className="min-w-0">
                                                     <p className="font-semibold text-gray-900 text-sm">{session.name}</p>
                                                     <div className="flex items-center gap-2 mt-1 flex-wrap">
-                                                        <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-[11px] font-medium">
+                                                        <span className="px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 text-[11px] font-medium">
                                                             {session.subject}
                                                         </span>
                                                         <span className="flex items-center gap-1 text-xs text-gray-500">
                                                             <FiClock size={12} />
                                                             {session.time} • {session.date}
                                                         </span>
-                                                        <span className="px-2 py-0.5 bg-green-50 text-green-700 rounded text-[11px] font-medium">
+                                                        <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-[11px] font-medium">
                                                             {session.type}
                                                         </span>
                                                     </div>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2 lg:w-fit w-full">
-                                                <button className="flex lg:w-fit w-full items-center justify-center gap-1.5 px-4 py-2.5 border border-gray-300 rounded-full text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all">
+                                                <button className="flex lg:w-fit w-full items-center justify-center gap-1.5 px-4 py-2.5 border border-gray-300 rounded-full text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-all">
                                                     <FiMessageCircle size={14} />
                                                     Message
                                                 </button>
                                                 <button
                                                     onClick={() => openSessionModal({ id: session.id, sessionLink: session.sessionLink })}
-                                                    className="px-4 lg:w-fit w-full py-2.5 bg-green-700 text-white rounded-full text-sm font-semibold hover:bg-green-800 transition-all"
+                                                    className="px-4 lg:w-fit w-full py-2.5 bg-green-700 text-white rounded-full text-xs font-semibold hover:bg-green-800 transition-all"
                                                 >
                                                     View Session
                                                 </button>
@@ -235,8 +235,8 @@ const TutorOverview = () => {
 
                             {upcomingSessions.length > 0 && (
                                 <Link
-                                    to="/tutor/dashboard/schedule"
-                                    className="block w-full pb-6 text-center text-sm font-semibold text-gray-500 hover:text-gray-700 pt-4 mt-2 border-t border-gray-100"
+                                    to="/tutor/dashboard/bookings"
+                                    className="block w-full pb-6 text-center text-xs font-semibold text-gray-500 hover:text-gray-700 pt-4 mt-2 border-t border-gray-100"
                                 >
                                     View Bookings
                                 </Link>
@@ -277,7 +277,7 @@ const TutorOverview = () => {
                                         ) : (
                                             <span className="w-4 h-4 rounded-full border-2 border-dashed border-gray-300 shrink-0" />
                                         )}
-                                        <span className={`text-sm ${step.done ? "text-gray-700" : "text-gray-500"}`}>
+                                        <span className={`text-xs ${step.done ? "text-gray-700" : "text-gray-500"}`}>
                                             {step.label}
                                         </span>
                                     </div>

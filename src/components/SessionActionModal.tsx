@@ -47,7 +47,7 @@ const SessionActionModal = ({ open, onClose, sessionId, sessionLink }: SessionAc
                 <div className="flex flex-col gap-2">
                     <button
                         onClick={handleJoinMeeting}
-                        className="w-full flex items-center justify-center gap-1.5 py-3 bg-green-700 text-white rounded-full text-sm font-semibold hover:bg-green-800 transition-all"
+                        className="w-full flex items-center justify-center gap-1.5 py-3 bg-green-700 text-white rounded-full text-xs font-semibold hover:bg-green-800 transition-all"
                     >
                         <FiVideo size={14} />
                         Join Meeting
@@ -55,7 +55,7 @@ const SessionActionModal = ({ open, onClose, sessionId, sessionLink }: SessionAc
                     <Link
                         to={TUTOR_SESSION_ROUTE(sessionId)}
                         onClick={onClose}
-                        className="w-full flex items-center justify-center gap-1.5 py-3 border border-gray-300 text-gray-700 rounded-full text-sm font-semibold hover:bg-gray-50 transition-all"
+                        className="w-full flex items-center justify-center gap-1.5 py-3 border border-gray-300 text-gray-700 rounded-full text-xs font-semibold hover:bg-gray-50 transition-all"
                     >
                         <FiExternalLink size={14} />
                         View Session Page

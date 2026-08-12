@@ -65,11 +65,7 @@ const DEFAULT_FILTERS: SelectedFilters = {
 };
 
 const LANGUAGES = ["English", "Spanish", "French", "Mandarin Chinese", "Arabic"];
-const RATING_OPTIONS = [4.5, 4, 3.5, 0];
 
-/** Reads the full filter set out of a URLSearchParams — used both on initial
- *  load and whenever another page (e.g. StudentOverview's category buttons)
- *  navigates here with params already set. */
 const parseFiltersFromParams = (params: URLSearchParams): SelectedFilters => ({
     search: params.get("search") || "",
     subject: params.get("subject") || "",
@@ -102,8 +98,6 @@ const filtersToParams = (filters: SelectedFilters): URLSearchParams => {
 const StudentTutors = () => {
     const [searchParams, setSearchParams] = useSearchParams();
 
-    // Seed all filters from the URL — e.g. StudentOverview's category buttons
-    // navigate with ?subject=Programming, but any filter can be passed in.
     const [selectedFilters, setSelectedFilters] = useState<SelectedFilters>(() =>
         parseFiltersFromParams(searchParams)
     );
@@ -204,15 +198,6 @@ const StudentTutors = () => {
         setExpandedFilters((prev) => ({
             ...prev,
             [filterName]: !prev[filterName],
-        }));
-    };
-
-    const handleAvailabilityChange = (day: string) => {
-        setSelectedFilters((prev) => ({
-            ...prev,
-            availability: prev.availability.includes(day)
-                ? prev.availability.filter((item) => item !== day)
-                : [...prev.availability, day],
         }));
     };
 
@@ -349,7 +334,6 @@ const StudentTutors = () => {
         </div>
     );
 
-    const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
     const FilterSection = ({
         title,
