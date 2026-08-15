@@ -159,7 +159,7 @@ const Home = () => {
                         Start your learning journey in three simple steps. We make finding and booking your ideal tutor seamless.
                     </p>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 sm:gap-6">
-                        {steps.map((s, i) => (
+                        {steps.map((s) => (
                             <div key={s.label} className="relative flex flex-col items-center bg-gray-50 border border-gray-100 rounded-2xl p-6 sm:p-7">
                                 <div className="relative mb-5">
                                     <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-green-50 flex items-center justify-center">
