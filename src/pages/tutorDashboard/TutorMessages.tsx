@@ -205,8 +205,6 @@ const TutorMessages = () => {
             try {
               socket.send(JSON.stringify({ type: "ping" }));
             } catch {
-              // Ignore — if the send genuinely fails the socket is dead and
-              // onclose/onerror will fire and trigger a reconnect anyway.
             }
           }
         }, HEARTBEAT_INTERVAL_MS);
@@ -218,9 +216,6 @@ const TutorMessages = () => {
           const incoming: ChatMessage = JSON.parse(event.data);
           if (incoming?.id == null) return; // e.g. a pong/ack with no message id
           setLiveMessages((prev) => (prev.some((m) => m.id === incoming.id) ? prev : [...prev, incoming]));
-
-          // Keep the sidebar (last message + unread count) in sync without
-          // requiring a manual refresh or leaving/returning to the page.
           queryClient.invalidateQueries({ queryKey: ["chats"] });
         } catch (err) {
           console.error("Failed to parse chat socket message:", err);
@@ -309,8 +304,6 @@ const TutorMessages = () => {
     try {
       socket.send(JSON.stringify({ content: trimmed }));
       setMessageText("");
-      // Intentionally not appending optimistically — the server echoes
-      // the message back over the same socket for both participants.
     } catch (err) {
       console.error("Failed to send message:", err);
     }
@@ -438,7 +431,7 @@ const TutorMessages = () => {
 const Avatar = ({
   src,
   name,
-  size = 40,
+  size = 30,
 }: {
   src?: string | null;
   name: string;
@@ -553,9 +546,6 @@ const ChatWindow = ({
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const emojiWrapperRef = useRef<HTMLDivElement | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-
-  // Keep the thread pinned to the newest message, whenever the message
-  // count changes or a different thread is opened.
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages.length, currentChat?.id]);
@@ -599,7 +589,7 @@ const ChatWindow = ({
   return (
     <div className="flex flex-col bg-gray-50 h-full overflow-hidden">
       {/* Header */}
-      <div className="mt-14 px-4 sm:px-8 py-4 border-b bg-gray-100 border-gray-200 flex items-center justify-between  shrink-0 z-20">
+      <div className="lg:mt-14 m-0 px-4 sm:px-8 py-4 border-b bg-gray-100 border-gray-200 flex items-center justify-between  shrink-0 z-20">
         <div className="flex items-center gap-3 min-w-0">
           {onBack && (
             <button
@@ -701,9 +691,6 @@ const ChatWindow = ({
               value={messageText}
               onChange={(e) => setMessageText(e.target.value)}
               onKeyDown={(e) => {
-                // Ignore Enter while an IME composition is in progress
-                // (e.g. typing accented or CJK characters), so a
-                // half-composed word never gets sent early.
                 if (e.key === "Enter" && !e.nativeEvent.isComposing) {
                   e.preventDefault();
                   handleSendMessage();

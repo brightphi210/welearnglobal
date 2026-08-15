@@ -39,12 +39,10 @@ const TutorDashNavbar = () => {
             <div className="px-4 sm:px-6 lg:px-8 py-2">
                 <div className="flex items-center justify-between">
 
-                    {/* Mobile Logo — hidden on md+ (sidebar takes over) */}
                     <span className="md:hidden text-2xl font-bold tracking-tight text-emerald-700">
                         Welearn
                     </span>
 
-                    {/* Right Icons */}
                     <div className="flex items-center gap-3 ml-auto">
                         <Link to={'/tutor/dashboard/messages'}>
                             <button className="relative p-2 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all hidden sm:flex items-center justify-center">
