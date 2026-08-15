@@ -7,7 +7,6 @@ import {
     FaUserCheck,
 } from "react-icons/fa";
 import {
-    FiBookmark,
     FiCheck,
     FiGlobe,
     FiSearch,
@@ -16,69 +15,6 @@ import {
 import heroImage from '../assets/welearnheroimage2.jpg';
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
-import TutorsBanner from "../components/TutorsBanner";
-
-
-const tutors = [
-    {
-        id: 1,
-        name: "Dr. Sarah Jenkins",
-        title: "PhD in Physics & Calculus with 10+ years of teaching experience",
-        sessions: 128,
-        rating: 4.9,
-        price: 55,
-        image: "SJ",
-        subjects: ["Physics", "Calculus"],
-        tags: ["AP Physics"],
-        sessionType: ["online"],
-        verified: true,
-        img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&q=80",
-    },
-    {
-        id: 2,
-        name: "James Rodriguez",
-        title: "Native Spanish speaker bringing language and culture to life",
-        sessions: 245,
-        rating: 5,
-        price: 35,
-        image: "JR",
-        subjects: ["Spanish", "Culture"],
-        tags: ["Conversational"],
-        sessionType: ["online", "on-site"],
-        verified: true,
-        img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80"
-    },
-    {
-        id: 3,
-        name: "Elena Fischer",
-        title: "Classical pianist with conservatory training and a passion for theory",
-        sessions: 89,
-        rating: 4.8,
-        price: 45,
-        image: "EF",
-        subjects: ["Piano", "Music Theory"],
-        tags: ["Classical"],
-        sessionType: ["online"],
-        verified: true,
-        img: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&q=80"
-
-    },
-    {
-        id: 4,
-        name: "Michael Chen",
-        title: "Full-stack engineer teaching practical, project-based web development",
-        sessions: 156,
-        rating: 4.9,
-        price: 65,
-        image: "MC",
-        subjects: ["Web Dev", "React"],
-        tags: ["Full-Stack"],
-        sessionType: ["online"],
-        verified: true,
-        img: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&q=80",
-
-    },
-];
 
 const testimonials = [
     { quote: "The level of expertise Sarah brought to my Calculus sessions was incredible. I went from failing to an A- in just three months.", name: "Mark Thompson", role: "High School Student", img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&q=80" },
@@ -122,92 +58,6 @@ const avatars = [
     "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=60&q=80",
     "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=60&q=80",
 ];
-
-const StarRating = ({ rating }: { rating: number }) => (
-    <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1">
-            {[...Array(5)].map((_, i) => (
-                <FaStar
-                    key={i}
-                    size={10}
-                    className={i < Math.round(rating) ? "text-yellow-400" : "text-gray-300"}
-                />
-            ))}
-        </div>
-        <span className="font-bold text-sm text-gray-900">{rating}</span>
-    </div>
-);
-
-const TutorCard = ({ tutor }: { tutor: typeof tutors[0] }) => (
-    <div className="bg-white rounded-3xl border border-gray-200 overflow-hidden transition-all hover:shadow-lg hover:shadow-green-100/60">
-        {/* Banner */}
-        <TutorsBanner seed={tutor.id} className="h-26 w-full" />
-
-        <div className="p-6 pt-0 flex flex-col h-full">
-            <div className="flex items-start justify-between gap-4 mb-2 relative -mt-8">
-                <div className="w-16 h-16 rounded-lg bg-green-950 ring-4 ring-gray-100 flex items-center overflow-hidden justify-center text-white font-bold text-lg shrink-0">
-                    <img src={tutor.img} className="w-full h-full object-cover" alt="" />
-                </div>
-                <button className="p-3 text-green-800 bg-white rounded-full mt-2 shadow-sm">
-                    <FiBookmark size={20} />
-                </button>
-            </div>
-
-            {/* Name and Title */}
-            <div className="mb-4">
-                <div className="flex items-center gap-1.5">
-                    <h4 className="text-lg font-bold text-gray-900">{tutor.name}</h4>
-                    {tutor.verified && (
-                        <span title="Verified" className="text-green-700">
-                            <FiCheck size={14} strokeWidth={3} />
-                        </span>
-                    )}
-                </div>
-                <p className="text-xs text-gray-600 line-clamp-2 leading-tight">{tutor.title}</p>
-            </div>
-
-            {/* Tags */}
-            <div className="flex flex-wrap gap-2 mb-2">
-                {tutor.tags.map((tag, idx) => (
-                    <span key={idx} className="px-2 py-1 bg-gray-200 text-gray-700 font-semibold rounded-full text-[10px]">
-                        {tag}
-                    </span>
-                ))}
-            </div>
-
-            {/* Rating */}
-            <div className="mb-2 flex items-center justify-between">
-                <StarRating rating={tutor.rating} />
-                <span className="text-xs text-gray-400">{tutor.sessions} sessions</span>
-            </div>
-
-            {/* Session Type and Price */}
-            <div className="flex items-center justify-between pt-2 border-t border-gray-200 mb-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                    {tutor.sessionType.includes("online") && (
-                        <span className="px-2 py-1 bg-green-50 text-green-700 rounded text-xs font-semibold">
-                            Online
-                        </span>
-                    )}
-                    {tutor.sessionType.includes("on-site") && (
-                        <span className="px-2 py-1 bg-orange-50 text-orange-700 rounded text-xs font-semibold">
-                            Onsite
-                        </span>
-                    )}
-                </div>
-                <div className="text-right">
-                    <span className="text-lg font-bold text-gray-900">${tutor.price}</span>
-                    <span className="text-xs text-gray-600">/hr</span>
-                </div>
-            </div>
-
-            {/* Action Button */}
-            <button className="w-full px-4 py-3 border-2 border-green-700 text-green-700 bg-white rounded-full font-semibold transition-all text-sm hover:bg-green-50">
-                View Profile
-            </button>
-        </div>
-    </div>
-);
 
 const Home = () => {
     const [sessionMode, setSessionMode] = useState<"online" | "in-person">("online");
