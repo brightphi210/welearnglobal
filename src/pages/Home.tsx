@@ -7,16 +7,12 @@ import {
     FaUserCheck,
 } from "react-icons/fa";
 import {
-    FiArrowRight,
     FiBookmark,
     FiCheck,
-    FiChevronRight,
     FiGlobe,
-    FiMapPin,
     FiSearch,
-    FiUser,
+    FiUser
 } from "react-icons/fi";
-// import heroImage from "../../assets/welearnheroimage.jpg";
 import heroImage from '../assets/welearnheroimage2.jpg';
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
@@ -220,16 +216,14 @@ const Home = () => {
         <div className="font-sans text-gray-900 bg-white">
             <Navbar />
             <div className="h-16" />
-
-            {/* ── HERO — Upwork-style full-bleed image with dark overlay & overlapping search card ── */}
             <section className="relative">
-                <div className="relative h-[520px] sm:h-[560px] lg:h-[600px] w-full overflow-hidden">
+                <div className="relative h-130 sm:h-140 lg:h-150 w-full overflow-hidden">
                     <img
                         src={heroImage}
                         alt="Student learning with a tutor"
                         className="absolute inset-0 w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-r from-green-950/90 via-green-950/70 to-green-950/30" />
+                    <div className="absolute inset-0 bg-linear-to-r from-black/70 via-black/40 to-black/80" />
 
                     <div className="relative h-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-center">
                         <div className="inline-flex items-center gap-1.5 bg-white/10 border border-white/20 text-white text-xs font-semibold px-3 py-1.5 rounded-full mb-5 w-fit backdrop-blur-sm">
@@ -243,23 +237,8 @@ const Home = () => {
                             Post what you want to learn, browse verified tutor profiles, and book a session in minutes. No subscriptions, pay only for the time you book.
                         </p>
 
-                        {/* Search */}
-                        <div className="flex flex-col sm:flex-row bg-white rounded-2xl shadow-2xl overflow-hidden max-w-2xl">
-                            <div className="flex items-center gap-2 px-4 py-3.5 flex-1 min-w-0 border-b sm:border-b-0 sm:border-r border-gray-100">
-                                <FiSearch size={16} className="text-gray-400 shrink-0" />
-                                <input placeholder="What do you want to learn?" className="border-none outline-none text-sm text-gray-700 bg-transparent w-full placeholder-gray-400" />
-                            </div>
-                            <div className="flex items-center gap-2 px-4 py-3.5 flex-1 min-w-0 border-b sm:border-b-0 sm:border-r border-gray-100">
-                                <FiMapPin size={16} className="text-gray-400 shrink-0" />
-                                <input placeholder="Location" className="border-none outline-none text-sm text-gray-700 bg-transparent w-full placeholder-gray-400" />
-                            </div>
-                            <button className="flex items-center justify-center gap-2 px-6 py-3.5 bg-green-700 text-white text-sm font-semibold whitespace-nowrap hover:bg-green-800 transition-colors">
-                                <FiSearch size={15} /> Find Tutors
-                            </button>
-                        </div>
-
                         {/* Mode toggle */}
-                        <div className="flex gap-2 mt-4">
+                        <div className="flex gap-2">
                             <button
                                 onClick={() => setSessionMode("online")}
                                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${sessionMode === "online" ? "bg-white text-green-800 border-white" : "bg-white/10 text-white border-white/30 hover:bg-white/20"
@@ -280,32 +259,28 @@ const Home = () => {
 
                 {/* Floating proof pill, overlapping hero/content boundary like Upwork's stat strip */}
                 <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 -mt-8 sm:-mt-10 px-5 sm:px-8 py-5 flex flex-col sm:flex-row items-center gap-4 sm:gap-8 relative z-10">
-                        <div className="flex -space-x-2 shrink-0">
+                    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 -mt-25 lg:-mt-10 px-5 sm:px-8 py-5 flex flex-col sm:flex-row items-center gap-4 sm:gap-8 relative z-10">
+                        <div className="flex -space-x-1 shrink-0">
                             {avatars.map((src, i) => (
                                 <img key={i} src={src} alt="" className="w-9 h-9 rounded-full border-2 border-white object-cover" />
                             ))}
                         </div>
                         <p className="text-sm text-gray-600 text-center sm:text-left">
-                            <span className="font-bold text-gray-900">10,000+ students</span> booked a session this week
+                            Booked a session this week
                         </p>
                         <div className="hidden sm:block w-px h-8 bg-gray-200" />
-                        <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                            <FaStar size={13} className="text-amber-400" />
-                            <span className="font-bold text-gray-900">4.9</span> average tutor rating
-                        </div>
                     </div>
                 </div>
             </section>
 
             {/* ── CATEGORY STRIP ── */}
-            <section className="px-4 sm:px-6 lg:px-8 pt-10 pb-6 bg-white">
+            <section className="px-4 sm:px-6 lg:px-8 lg:pt-10 pt-5 pb-6 bg-white">
                 <div className="max-w-6xl mx-auto">
-                    <div className="flex gap-2 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+                    <div className="flex lg:justify-center gap-2 overflow-x-auto pb-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
                         {categories.map((cat) => (
                             <button
                                 key={cat}
-                                className="shrink-0 px-4 py-2 rounded-full border border-gray-200 text-sm font-semibold text-gray-700 hover:border-green-300 hover:bg-green-50 hover:text-green-700 transition-all whitespace-nowrap"
+                                className="shrink-0 px-4 py-2 rounded-full border border-gray-200 text-xs font-semibold text-gray-700 hover:border-green-300 hover:bg-green-50 hover:text-green-700 transition-all whitespace-nowrap"
                             >
                                 {cat}
                             </button>
@@ -315,12 +290,12 @@ const Home = () => {
             </section>
 
             {/* ── STATS BAND ── */}
-            <section className="px-4 sm:px-6 lg:px-8 py-10 bg-green-950">
+            <section className="px-4 sm:px-6 lg:px-8 py-10 bg-neutral-800">
                 <div className="max-w-6xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-4 text-center">
                     {stats.map((s) => (
                         <div key={s.label}>
-                            <p className="text-2xl sm:text-3xl font-extrabold text-white mb-1">{s.value}</p>
-                            <p className="text-xs sm:text-sm text-green-200">{s.label}</p>
+                            <p className="text-xl sm:text-2xl font-extrabold text-white mb-1">{s.value}</p>
+                            <p className="text-xs sm:text-xs text-neutral-200">{s.label}</p>
                         </div>
                     ))}
                 </div>
@@ -347,28 +322,6 @@ const Home = () => {
                                 <h3 className="text-base font-bold text-gray-900 mb-2">{s.label}</h3>
                                 <p className="text-sm text-gray-500 leading-relaxed text-center">{s.desc}</p>
                             </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
-
-            {/* ── FEATURED EXPERTS ── */}
-            <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-gray-50">
-                <div className="max-w-6xl mx-auto">
-                    <div className="flex flex-wrap items-end justify-between gap-4 mb-8 sm:mb-9">
-                        <div>
-                            <span className="text-xs font-bold text-green-700 uppercase tracking-widest block mb-1.5">Top rated</span>
-                            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-2">Featured experts</h2>
-                            <p className="text-sm text-gray-500">Learn from the best. These tutors are currently trending.</p>
-                        </div>
-                        <button className="flex items-center gap-1.5 px-4 py-2.5 border border-gray-200 rounded-full bg-white text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors shrink-0">
-                            Explore all tutors <FiChevronRight size={14} />
-                        </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-                        {tutors.map((t) => (
-                            <TutorCard key={t.id} tutor={t} />
                         ))}
                     </div>
                 </div>
@@ -412,9 +365,6 @@ const Home = () => {
                                 </li>
                             ))}
                         </ul>
-                        <button className="px-6 py-3 rounded-full bg-green-700 text-white text-sm font-semibold hover:bg-green-800 transition-colors border-none cursor-pointer">
-                            Join the community
-                        </button>
                     </div>
                 </div>
             </section>
@@ -454,17 +404,9 @@ const Home = () => {
                     <h2 className="relative text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight mb-4">
                         Ready to start your next learning adventure?
                     </h2>
-                    <p className="relative text-sm sm:text-[15px] text-green-100/80 leading-relaxed max-w-sm mx-auto mb-8 sm:mb-9">
+                    <p className="relative text-sm sm:text-[15px] text-green-100/80 leading-relaxed max-w-sm mx-auto">
                         Join thousands of students and tutors today. Registration is free and takes less than 2 minutes.
                     </p>
-                    <div className="relative flex flex-wrap gap-3 justify-center">
-                        <button className="flex items-center gap-2 px-6 sm:px-7 py-3.5 rounded-full bg-green-700 hover:bg-green-600 text-white font-bold text-sm transition-colors border-none cursor-pointer">
-                            Get started for free <FiArrowRight size={15} />
-                        </button>
-                        <button className="px-6 sm:px-7 py-3.5 rounded-full border border-white/25 bg-white/10 text-white font-semibold text-sm hover:bg-white/20 transition-colors cursor-pointer">
-                            Become a tutor
-                        </button>
-                    </div>
                 </div>
             </section>
 

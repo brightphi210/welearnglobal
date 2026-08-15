@@ -626,7 +626,7 @@ const StudentTutorProfile = () => {
             subject: details.subject === "Other" ? details.customSubject.trim() : details.subject,
             session_type: sessionType,
             notes: details.notes.trim(),
-            duration_days: details.duration,
+            duration: details.duration,
         };
 
         setBookingError(null);

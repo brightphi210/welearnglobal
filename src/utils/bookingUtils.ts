@@ -67,6 +67,7 @@ export const getInitials = (name: string) => {
 
 /** Normalizes one raw booking object from the API into the shared Booking shape. */
 export const mapBookingResponse = (booking: any): Booking => {
+  console.log('Props Booking', booking)
   const tutorName =
     booking.tutor?.full_name ||
     booking.tutor?.name ||
@@ -92,7 +93,7 @@ export const mapBookingResponse = (booking: any): Booking => {
     subject,
     date,
     time,
-    duration: rawStartTime && rawEndTime ? time : "Time TBD",
+    duration: booking?.duration,
     sessionType: formatSessionType(booking.session_type) as Booking["sessionType"],
     status: normalizeStatus(booking.status),
     notes: booking.notes || booking.tutor_response_note || "No notes provided yet.",

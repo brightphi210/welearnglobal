@@ -11,32 +11,16 @@ const MOBILE_BOTTOM_NAV_HEIGHT = 10;
 const WS_BASE_URL = "wss://api.welearnglobal.online";
 const getAccessToken = () => localStorage.getItem("welearnToken") || "";
 
-// This page is only ever rendered for a logged-in tutor, and every thread
-// has exactly one student and one tutor — so we can tell "my" messages apart
-// from the other participant's by role, without needing the numeric user id
-// from auth wired up yet.
-// TODO: once useAuth() exposes the real user id, prefer comparing
-// msg.sender.id === currentUserId instead (handles edge cases like admin
-// views, etc.)
 const CURRENT_USER_ROLE = "tutor" as const;
 const OTHER_PARTICIPANT_ROLE = "student" as const;
 
 const MAX_MESSAGE_LENGTH = 2000;
-// Reconnect backoff: grows with each attempt but never waits longer than this.
-// We no longer give up after N tries — a flaky connection should keep trying
-// quietly in the background instead of going permanently dark.
 const MAX_RECONNECT_DELAY_MS = 15000;
-const HEARTBEAT_INTERVAL_MS = 25000; // keep idle-timeout proxies/load balancers from killing the socket
-// After a 4001 (auth expired) close, allow a couple of soft retries in case
-// a token refresh happens elsewhere in the app (e.g. an axios interceptor),
-// before giving up and asking the user to reconnect manually.
+const HEARTBEAT_INTERVAL_MS = 25000;
 const MAX_AUTH_RETRIES = 2;
 
-// Subtle WhatsApp-style tiled wallpaper for the message thread background.
-// Encoded inline as an SVG data URI so no extra asset/network request is needed.
 const CHAT_BG_PATTERN =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cg fill='%23000000' fill-opacity='0.035'%3E%3Ccircle cx='20' cy='20' r='2.5'/%3E%3Ccircle cx='70' cy='10' r='1.5'/%3E%3Ccircle cx='100' cy='40' r='2'/%3E%3Ccircle cx='40' cy='55' r='1.5'/%3E%3Ccircle cx='10' cy='90' r='2'/%3E%3Ccircle cx='60' cy='95' r='2.5'/%3E%3Ccircle cx='95' cy='100' r='1.5'/%3E%3Ccircle cx='110' cy='70' r='1.5'/%3E%3C/g%3E%3C/svg%3E";
-
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Cg fill='none' stroke='%23000000' stroke-opacity='0.045' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3C!-- chat bubble --%3E%3Cpath d='M20 30 h22 a6 6 0 0 1 6 6 v12 a6 6 0 0 1 -6 6 h-14 l-6 6 v-6 h-2 a6 6 0 0 1 -6 -6 v-12 a6 6 0 0 1 6 -6 z'/%3E%3C!-- music note --%3E%3Cpath d='M95 20 v20 a5 5 0 1 1 -3 -4.6 V22 l14 -4 v16 a5 5 0 1 1 -3 -4.6 V16 z'/%3E%3C!-- heart --%3E%3Cpath d='M150 35 c-4 -8 -16 -6 -16 3 c0 7 9 12 16 18 c7 -6 16 -11 16 -18 c0 -9 -12 -11 -16 -3 z'/%3E%3C!-- camera --%3E%3Cpath d='M20 95 h26 v18 h-26 z M28 95 l3 -5 h8 l3 5 M33 104 a4 4 0 1 0 0.1 0'/%3E%3C!-- leaf/plant --%3E%3Cpath d='M95 90 c10 -2 18 6 16 16 c-10 2 -18 -6 -16 -16 z M95 90 c2 6 2 12 0 20'/%3E%3C!-- paper plane --%3E%3Cpath d='M145 88 l28 12 l-12 4 l-4 12 l-4 -10 z'/%3E%3C!-- clock --%3E%3Ccircle cx='30' cy='155' r='11'/%3E%3Cpath d='M30 148 v7 l5 4'/%3E%3C!-- mic --%3E%3Cpath d='M100 145 a6 6 0 0 1 12 0 v8 a6 6 0 0 1 -12 0 z M94 155 a12 12 0 0 0 24 0 M106 167 v6 M100 173 h12'/%3E%3C!-- star --%3E%3Cpath d='M165 150 l3 7 l7.5 1 l-5.5 5.3 l1.3 7.5 l-6.3 -3.7 l-6.3 3.7 l1.3 -7.5 l-5.5 -5.3 l7.5 -1 z'/%3E%3C!-- small dots scattered for texture --%3E%3Ccircle cx='60' cy='60' r='1.4'/%3E%3Ccircle cx='175' cy='65' r='1.4'/%3E%3Ccircle cx='65' cy='130' r='1.4'/%3E%3Ccircle cx='135' cy='140' r='1.4'/%3E%3Ccircle cx='10' cy='175' r='1.4'/%3E%3C/g%3E%3C/svg%3E";
 const EMOJI_LIST = [
   "😀", "😁", "😂", "🤣", "😊", "🙂", "😉", "😍",
   "😘", "😜", "🤔", "😎", "😴", "😢", "😭", "😡",
@@ -96,9 +80,7 @@ const initialsFor = (name: string) =>
     .slice(0, 2)
     .toUpperCase() || "?";
 
-// Pulls the other participant's live name/photo/role off the thread's last
-// message (sender or receiver, whichever isn't the current user), falling
-// back to other_participant_name if there's no message yet.
+
 const getOtherParticipant = (chat: ChatThread): { name: string; profileImage: string | null; role: string } => {
   const lastMessage = chat.last_message;
   const candidate =
@@ -126,8 +108,6 @@ const TutorMessages = () => {
   const [liveMessages, setLiveMessages] = useState<ChatMessage[]>([]);
   const [socketStatus, setSocketStatus] = useState<SocketStatus>("idle");
   const socketRef = useRef<WebSocket | null>(null);
-  // Bumping this forces the connect effect below to run again on demand,
-  // e.g. from the manual "Reconnect" button, without changing selectedChat.
   const [reconnectNonce, setReconnectNonce] = useState(0);
 
   const { getChats, isLoading: isLoadingChats } = useGetChats();
@@ -160,15 +140,6 @@ const TutorMessages = () => {
   // mobile AND desktop. No more auto-opening the first chat in the list.
   const currentChat = chats.find((c) => c.id === selectedChat);
 
-  // Merge REST history with anything that's arrived live over the socket
-  // since opening the thread, de-duped by id.
-  //
-  // Crucially, we also filter everything to `thread === selectedChat`. This
-  // is what actually fixes the "messages from the last chat linger until I
-  // refresh" bug: if the chats query briefly serves cached/previous data
-  // while switching threads (very common with react-query + keepPreviousData,
-  // or any caching that isn't perfectly keyed per chat id), those stale rows
-  // get filtered out here instead of flashing on screen in the wrong thread.
   const messages = useMemo(() => {
     if (selectedChat == null) return [];
     const byId = new Map<number, ChatMessage>();
@@ -265,11 +236,7 @@ const TutorMessages = () => {
         clearHeartbeat();
 
         if (event.code === 4001) {
-          // Token missing/invalid/expired. Give it a couple of soft retries
-          // (a token refresh may be happening elsewhere in the app), then
-          // stop and let the user hit "Reconnect" once they're re-authed.
-          // TODO: once a refreshAccessToken() helper exists, call it here
-          // directly instead of just retrying and hoping the token changed.
+
           if (authRetries < MAX_AUTH_RETRIES) {
             authRetries += 1;
             scheduleReconnect();
@@ -294,9 +261,6 @@ const TutorMessages = () => {
 
     connect();
 
-    // If the tab regains focus or the browser reports we're back online,
-    // and we're not currently connected, try immediately instead of
-    // waiting out the backoff timer.
     const tryImmediateReconnect = () => {
       if (cancelled) return;
       const state = socketRef.current?.readyState;
@@ -362,7 +326,7 @@ const TutorMessages = () => {
         {/* Chat List */}
         <div className="flex flex-col bg-white pt-14 border-r border-gray-100 h-full overflow-hidden">
           {/* Fixed search header */}
-          <div className="px-8 py-6 border-b border-gray-100 shrink-0">
+          <div className="px-8 lg:py-6 border-b border-gray-100 shrink-0">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Messages</h2>
             <div className="flex-1 relative">
               <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
@@ -417,7 +381,6 @@ const TutorMessages = () => {
         style={{ height: `calc(100vh - ${TOP_NAV_HEIGHT}px - ${MOBILE_BOTTOM_NAV_HEIGHT}px)` }}
       >
         {selectedChat !== null ? (
-          /* ── Chat window (drill-in view) ── */
           <ChatWindow
             currentChat={currentChat}
             messages={messages}
@@ -431,8 +394,7 @@ const TutorMessages = () => {
             isMobile
           />
         ) : (
-          /* ── Chat list (default mobile view) ── */
-          <div className="flex flex-col bg-white h-full w-full overflow-hidden pt-14">
+          <div className="flex flex-col bg-white h-full w-full overflow-hidden lg:pt-14 ">
             <div className="px-4 py-4 border-b border-gray-100 shrink-0">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Messages</h2>
               <div className="flex-1 relative">
@@ -458,7 +420,7 @@ const TutorMessages = () => {
                   <ChatListItem
                     key={chat.id}
                     chat={chat}
-                    isActive={false} // nothing active on the list view
+                    isActive={false}
                     onSelect={() => setSelectedChat(chat.id)}
                     mobile
                   />
@@ -536,7 +498,7 @@ const ChatListItem = ({
               {chat.last_message ? formatMessageTime(chat.last_message.created_at) : ""}
             </span>
           </div>
-          <p className={`text-xs w-full truncate ${chat.unread_count > 0 ? "text-gray-900 font-medium" : "text-gray-600"}`}>
+          <p className={`text-xs w-full lg:truncate ${chat.unread_count > 0 ? "text-gray-900 font-medium" : "text-gray-600"}`}>
             {chat.last_message?.content || "No messages yet"}
           </p>
         </div>
@@ -691,10 +653,6 @@ const ChatWindow = ({
         ) : (
           <div className="space-y-3">
             {messages.map((msg) => {
-              // "Mine" = the sender's role matches whoever is logged in on
-              // this page (a student on this screen, a tutor on the tutor
-              // screen). Each thread only has these two roles, so this is a
-              // safe stand-in until real per-user auth is wired up.
               const isMine = msg.sender?.role === CURRENT_USER_ROLE;
               const senderName = msg.sender?.full_name || (isMine ? "You" : other.name);
 

@@ -134,6 +134,25 @@ export const useGetSingleChat = (id?: string) => {
 };
 
 
+export const useMakePayment = (id: string) => {
+    const { data, isLoading, isError, isFetched, refetch } = useQuery({
+        queryKey: ["payment", id],
+        queryFn: async () => {
+            const token = (await localStorage.getItem("welearnToken")) || "";
+            return get_requests(`payment/initiate/${id}/booking/`, token);
+        },
+    });
+
+    return {
+        getPaymentUrl: data,
+        isLoading,
+        isError,
+        isFetched,
+        refetch,
+    };
+};
+
+
 // ========================== EVERYTHING BELOW IS FOR TUTOR PROFILE ==========================
 
 // ================ TUTOR PROFILE ================
@@ -211,3 +230,45 @@ export const useGetBookingById = (id: string) => {
         refetch,
     };
 };
+
+
+export const useGetWalletData = () => {
+    const { data, isLoading, isError, isFetched, refetch } = useQuery({
+        queryKey: ["wallet"],
+        queryFn: async () => {
+            const token = (await localStorage.getItem("welearnToken")) || "";
+            return get_requests(`tutors/my-profile/wallet/`, token);
+        },
+    });
+
+    return {
+        getWalletData: data,
+        isLoading,
+        isError,
+        isFetched,
+        refetch,
+    };
+};
+
+export const useGetTransactionData = () => {
+    const { data, isLoading, isError, isFetched, refetch } = useQuery({
+        queryKey: ["transaction"],
+        queryFn: async () => {
+            const token = (await localStorage.getItem("welearnToken")) || "";
+            return get_requests(`tutors/my-profile/transactions/`, token);
+        },
+    });
+
+    return {
+        getTransactionData: data,
+        isLoading,
+        isError,
+        isFetched,
+        refetch,
+    };
+};
+
+
+
+
+

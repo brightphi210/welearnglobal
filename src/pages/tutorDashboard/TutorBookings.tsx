@@ -39,26 +39,45 @@ const TutorBookings = () => {
     const myBookings = Array.isArray(myBookingsAsTutor?.data) ? myBookingsAsTutor.data : [];
     const { mutate: respondToBooking, isPending } = useAcceptOrDeclineBooking(selectedBookingId || "");
 
-    const bookings = myBookings.map((booking: any) => ({
-        id: booking.id,
-        status: normalizeStatus(booking.status),
-        student: booking.student?.full_name || booking.student?.first_name,
-        studentNameForAvatar: booking.student?.full_name || booking.student?.first_name || "Student",
-        studentEmail: booking.student?.email,
-        studentId: booking.student?.id,
-        subject: booking.subject || "No subject provided",
-        date: formatDisplayDate(booking.scheduled_date),
-        time: `${formatDisplayTime(booking.start_time)}${booking.end_time ? ` - ${formatDisplayTime(booking.end_time)}` : ""}`,
-        type: formatSessionType(booking.session_type),
-        notes: booking.notes || booking.tutor_response_note || "No notes provided yet.",
-        sessionLink: booking.session_link || "",
-        locationAddress: booking.location_address || "",
-        startTime: formatDisplayTime(booking.start_time),
-        endTime: booking.end_time ? formatDisplayTime(booking.end_time) : "",
-        price: booking.total_amount ?? booking.price ?? 0,
-        image: booking.student?.profile_image,
-        raw: booking,
-    }));
+    const bookings = myBookings.map((booking: any) => {
+        // The backend sometimes overloads `status` with payment states
+        // (e.g. "payment_confirmed") instead of always sending a plain
+        // booking-lifecycle value. Treat that case explicitly as "upcoming"
+        // so it lands in the right tab instead of being dropped by
+        // normalizeStatus's default mapping.
+        const derivedStatus =
+            booking.status === "payment_confirmed" ? "upcoming" : normalizeStatus(booking.status);
+
+        // Same idea for paymentStatus: fall back to the booking status
+        // itself when there's no separate payment_status field.
+        const derivedPaymentStatus =
+            booking.payment_status ||
+            booking.paymentStatus ||
+            (booking.status === "payment_confirmed" ? "payment_confirmed" : "");
+
+        return {
+            id: booking.id,
+            status: derivedStatus,
+            paymentStatus: derivedPaymentStatus,
+            student: booking.student?.full_name || booking.student?.first_name,
+            studentNameForAvatar: booking.student?.full_name || booking.student?.first_name || "Student",
+            studentEmail: booking.student?.email,
+            studentId: booking.student?.id,
+            subject: booking.subject || "No subject provided",
+            date: formatDisplayDate(booking.scheduled_date),
+            time: `${formatDisplayTime(booking.start_time)}${booking.end_time ? ` - ${formatDisplayTime(booking.end_time)}` : ""}`,
+            type: formatSessionType(booking.session_type),
+            notes: booking.notes || booking.tutor_response_note || "No notes provided yet.",
+            sessionLink: booking.session_link || "",
+            locationAddress: booking.location_address || "",
+            startTime: formatDisplayTime(booking.start_time),
+            endTime: booking.end_time ? formatDisplayTime(booking.end_time) : "",
+            price: booking.total_amount ?? booking.price ?? 0,
+            image: booking.student?.profile_image,
+            raw: booking,
+            duration: booking?.duration,
+        };
+    });
 
     const tabCounts = {
         upcoming: bookings.filter((booking: any) => booking.status === "upcoming").length,
@@ -81,6 +100,18 @@ const TutorBookings = () => {
         pending: "bg-amber-50 text-amber-700",
         completed: "bg-gray-100 text-gray-700",
         cancelled: "bg-red-50 text-red-700",
+    };
+
+    const paymentBadge: Record<string, string> = {
+        payment_confirmed: "bg-green-50 text-green-700",
+        pending: "bg-amber-50 text-amber-700",
+        failed: "bg-red-50 text-red-700",
+    };
+
+    const paymentLabel: Record<string, string> = {
+        payment_confirmed: "Payment Confirmed",
+        pending: "Payment Pending",
+        failed: "Payment Failed",
     };
 
     const openResponseModal = (bookingId: string | number, action: "accept" | "decline") => {
@@ -118,6 +149,9 @@ const TutorBookings = () => {
                     setResponseNote("");
                     setResponseError("");
                     toast("Action Successfully!", { type: "success" });
+                },
+                onError: (e) => {
+                    console.log(e.message);
                 },
             }
         );
@@ -170,9 +204,24 @@ const TutorBookings = () => {
                     </span>
                 </div>
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <span className="px-2 py-1 bg-gray-100 rounded text-[11px] font-semibold text-gray-700">
-                        {booking.type}
-                    </span>
+                    <div className="flex gap-2 flex-wrap">
+                        <span className="px-2.5 py-1 bg-gray-200 rounded-full text-[11px] font-semibold text-gray-700">
+                            {booking.type}
+                        </span>
+
+                        <span className="px-2.5 py-1 bg-gray-200 rounded-full text-[11px] font-semibold text-gray-700">
+                            Duration: {booking.duration}days
+                        </span>
+
+                        {booking.paymentStatus && (
+                            <span
+                                className={`px-2.5 py-1 rounded-full text-[11px] font-semibold ${paymentBadge[booking.paymentStatus] || "bg-gray-200 text-gray-700"
+                                    }`}
+                            >
+                                {paymentLabel[booking.paymentStatus] || booking.paymentStatus}
+                            </span>
+                        )}
+                    </div>
                     <span className="font-bold text-gray-900 text-sm">{booking.price ? `$${booking.price}` : "Price TBD"}</span>
                 </div>
             </div>
@@ -204,15 +253,12 @@ const TutorBookings = () => {
 
                 {booking.status === "upcoming" && (
                     <div className="flex flex-col sm:flex-row gap-2">
-                        <button className="flex-1 flex items-center justify-center gap-1.5 px-4 py-3.5 border border-gray-300 text-gray-700 rounded-full text-xs font-semibold hover:bg-gray-50 transition-all">
-                            <FiMessageCircle size={14} />
-                            Message
-                        </button>
                         <button
                             onClick={() => openSessionDetails(booking)}
-                            className="flex-1 px-4 py-3.5 bg-green-700 text-white rounded-full text-xs font-semibold hover:bg-green-800 transition-all"
+                            disabled={booking.paymentStatus !== "payment_confirmed"}
+                            className="flex-1 px-4 py-3.5 bg-green-900 text-white rounded-full text-xs font-semibold hover:bg-green-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            View Session
+                            {booking.paymentStatus === "payment_confirmed" ? "View Session" : "Awaiting Payment"}
                         </button>
                     </div>
                 )}
@@ -242,10 +288,10 @@ const TutorBookings = () => {
         <div className="md:pl-56 pb-20 md:pb-8 lg:pt-20">
             <LoadingOverlay visible={isLoading || isPending} />
             <ToastContainer />
-            <div className="min-h-screen pt-8 bg-gray-50 px-4 sm:px-6 lg:px-8 max-w-7xl m-auto">
+            <div className="min-h-screen lg:pt-8 pt-2 bg-gray-50 px-4 sm:px-6 lg:px-8 max-w-7xl m-auto">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
                     <div>
-                        <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-1">Bookings</h1>
+                        <h1 className="text-2xl sm:text-2xl font-extrabold text-gray-900 mb-1">Bookings</h1>
                         <p className="text-gray-600 text-sm">
                             Manage your session requests and upcoming lessons in one place.
                         </p>
@@ -260,12 +306,12 @@ const TutorBookings = () => {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 mb-6 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] scrollbar-none">
+                <div className="flex flex-wrap items-center gap-2 mb-6 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] scrollbar-none">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${activeTab === tab.id
+                            className={`flex  items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${activeTab === tab.id
                                 ? "bg-green-700 text-white"
                                 : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
                                 }`}
@@ -316,7 +362,7 @@ const TutorBookings = () => {
             {sessionDetailsOpen && selectedSession && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSessionDetailsOpen(false)} />
-                    <div className="relative bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto overflow-x-hidden mx-2 sm:mx-0">
+                    <div className="relative bg-white rounded-xl shadow-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto overflow-x-hidden mx-2 sm:mx-0">
                         <button
                             onClick={() => setSessionDetailsOpen(false)}
                             className="absolute top-4 right-4 z-10 p-2 text-gray-400 hover:text-gray-600 rounded-full bg-white/80 backdrop-blur"
@@ -342,9 +388,19 @@ const TutorBookings = () => {
                                     <p className="text-sm font-bold text-gray-900">{selectedSession.student}</p>
                                     {selectedSession.studentEmail && <p className="text-xs text-gray-500">{selectedSession.studentEmail}</p>}
                                 </div>
-                                <p className="rounded-full w-fit bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                                    {selectedSession.type}
-                                </p>
+                                <div className="flex flex-col items-end gap-1">
+                                    <p className="rounded-full w-fit bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                                        {selectedSession.type}
+                                    </p>
+                                    {selectedSession.paymentStatus && (
+                                        <p
+                                            className={`rounded-full w-fit px-3 py-1 text-xs font-semibold ${paymentBadge[selectedSession.paymentStatus] || "bg-gray-100 text-gray-700"
+                                                }`}
+                                        >
+                                            {paymentLabel[selectedSession.paymentStatus] || selectedSession.paymentStatus}
+                                        </p>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
@@ -353,41 +409,41 @@ const TutorBookings = () => {
                                         <FiCalendar size={14} />
                                         <span className="text-xs font-semibold">Date</span>
                                     </div>
-                                    <p className="text-sm font-semibold text-gray-900">{selectedSession.date}</p>
+                                    <p className="text-xs font-semibold text-gray-900">{selectedSession.date}</p>
                                 </div>
                                 <div className="rounded-xl border border-gray-200 p-3">
                                     <div className="flex items-center gap-2 text-gray-600 mb-1">
                                         <FiClock size={14} />
                                         <span className="text-xs font-semibold">Time</span>
                                     </div>
-                                    <p className="text-sm font-semibold text-gray-900">{selectedSession.time}</p>
+                                    <p className="text-xs font-semibold text-gray-900">{selectedSession.time}</p>
                                 </div>
                             </div>
 
                             <div className="rounded-xl border border-gray-200 p-4">
                                 <div className="flex items-center gap-2 text-gray-700 mb-2">
                                     <FiUser size={14} />
-                                    <p className="text-sm font-semibold">Subject</p>
+                                    <p className="text-xs font-semibold">Subject</p>
                                 </div>
-                                <p className="text-sm text-gray-600 wrap-break-word">{selectedSession.subject}</p>
+                                <p className="text-xs text-gray-600 wrap-break-word">{selectedSession.subject}</p>
                             </div>
 
                             {selectedSession.notes && (
                                 <div className="rounded-xl border border-gray-200 p-4">
                                     <div className="flex items-center gap-2 text-gray-700 mb-2">
                                         <FiMessageCircle size={14} />
-                                        <p className="text-sm font-semibold">Notes</p>
+                                        <p className="text-xs font-semibold">Notes</p>
                                     </div>
-                                    <p className="text-sm text-gray-600 wrap-break-word">{selectedSession.notes}</p>
+                                    <p className="text-xs text-gray-600 wrap-break-word">{selectedSession.notes}</p>
                                 </div>
                             )}
 
                             <div className="rounded-xl border border-gray-200 p-4">
                                 <div className="flex items-center gap-2 text-gray-700 mb-2">
                                     <FiMapPin size={14} />
-                                    <p className="text-sm font-semibold">Location</p>
+                                    <p className="text-xs font-semibold">Location</p>
                                 </div>
-                                <p className="text-sm text-gray-600 wrap-break-word">
+                                <p className="text-xs text-gray-600 wrap-break-word">
                                     {selectedSession.locationAddress || "No physical location provided yet."}
                                 </p>
                             </div>
@@ -395,8 +451,8 @@ const TutorBookings = () => {
                             <div className="rounded-xl border border-gray-200 p-4">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 flex-wrap">
                                     <div>
-                                        <p className="text-sm font-semibold text-gray-900">Session link</p>
-                                        <p className="text-sm text-gray-500 break-all">
+                                        <p className="text-xs font-semibold text-gray-900">Session link</p>
+                                        <p className="text-xs text-gray-500 break-all">
                                             {selectedSession.sessionLink || "No link provided yet."}
                                         </p>
                                     </div>
@@ -404,14 +460,15 @@ const TutorBookings = () => {
                                         <Link
                                             to={TUTOR_SESSION_ROUTE(selectedSession.id)}
                                             onClick={() => setSessionDetailsOpen(false)}
-                                            className="inline-flex lg:w-fit w-full text-center justify-center items-center gap-2 rounded-full border border-gray-300 text-gray-700 px-4 py-3.5 text-sm font-semibold hover:bg-gray-50 transition-all"
+                                            className="inline-flex lg:w-fit w-full text-center justify-center items-center gap-2 rounded-full border border-gray-300 text-gray-700 px-4 py-3.5 text-xs font-semibold hover:bg-gray-50 transition-all"
                                         >
                                             <FiExternalLink size={14} />
                                             View Session Page
                                         </Link>
                                         <button
                                             onClick={handleBeginSession}
-                                            className="inline-flex lg:w-fit w-full text-center justify-center items-center gap-2 rounded-full bg-green-700 px-4 py-3.5 text-sm font-semibold text-white hover:bg-green-800 transition-all"
+                                            disabled={selectedSession.paymentStatus !== "payment_confirmed"}
+                                            className="inline-flex lg:w-fit w-full text-center justify-center items-center gap-2 rounded-full bg-green-700 px-4 py-3.5 text-xs font-semibold text-white hover:bg-green-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             <FiVideo size={14} />
                                             Begin Session
@@ -423,7 +480,8 @@ const TutorBookings = () => {
                             {selectedSession.sessionLink && (
                                 <button
                                     onClick={handleBeginSession}
-                                    className="flex w-full items-center justify-center gap-2 rounded-full border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700 hover:bg-green-100 transition-all"
+                                    disabled={selectedSession.paymentStatus !== "payment_confirmed"}
+                                    className="flex w-full items-center justify-center gap-2 rounded-full border border-green-200 bg-green-50 px-4 py-3 text-xs font-semibold text-green-700 hover:bg-green-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <FiExternalLink size={14} />
                                     Open session link
@@ -470,14 +528,14 @@ const TutorBookings = () => {
                             <button
                                 onClick={() => setResponseModalOpen(false)}
                                 disabled={isPending}
-                                className="flex-1 py-2.5 border border-gray-200 rounded-full text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-40"
+                                className="flex-1 py-2.5 border border-gray-200 rounded-full text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-40"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleRespondToBooking}
                                 disabled={isPending}
-                                className="flex-1 py-2.5 bg-green-700 text-white rounded-full text-sm font-semibold hover:bg-green-800 transition-all disabled:opacity-60"
+                                className="flex-1 py-2.5 bg-green-700 text-white rounded-full text-xs font-semibold hover:bg-green-800 transition-all disabled:opacity-60"
                             >
                                 {isPending ? "Submitting..." : responseAction === "accept" ? "Accept" : "Decline"}
                             </button>

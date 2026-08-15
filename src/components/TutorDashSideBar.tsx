@@ -33,9 +33,11 @@ const TutorDashSideBar = () => {
 
                 {/* Logo */}
                 <div className="px-6 pt-8 pb-5 border-b border-white/10">
-                    <span className="text-lg font-semibold tracking-tight text-green-300">
-                        We<span className="text-green-400">learn</span>
-                    </span>
+                    <Link to={'/'}>
+                        <span className="text-lg font-semibold tracking-tight text-green-300">
+                            Welearn
+                        </span>
+                    </Link>
                 </div>
 
                 <div className="flex-1 overflow-y-auto py-4 px-3">
@@ -44,7 +46,7 @@ const TutorDashSideBar = () => {
                             <Link
                                 key={link}
                                 to={link}
-                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all font-medium text-sm ${isActive(link)
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all font-medium text-xs ${isActive(link)
                                     ? "bg-green-100 text-green-800"
                                     : "text-green-50 hover:bg-green-50/10 hover:text-green-300"
                                     }`}
@@ -58,7 +60,7 @@ const TutorDashSideBar = () => {
 
                 {/* Logout */}
                 <div className="px-3 py-5 border-t border-white/10">
-                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-neutral-400 hover:bg-red-500/10 hover:text-red-400 transition-all font-medium text-sm">
+                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-neutral-400 hover:bg-red-500/10 hover:text-red-400 transition-all font-medium text-xs">
                         <FiLogOut size={18} />
                         <span>Sign Out</span>
                     </button>

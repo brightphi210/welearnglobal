@@ -1,15 +1,14 @@
-import { FaGraduationCap } from "react-icons/fa";
 import { FiFacebook, FiInstagram, FiLinkedin, FiTwitter } from "react-icons/fi";
 
 const Footer = () => {
     const columns = [
         {
             heading: "Platform",
-            links: ["Discover Tutors", "How it works", "Pricing", "Resources"],
+            links: ["How it works"],
         },
         {
             heading: "Support",
-            links: ["Help Center", "Safety & Security", "Contact Us"],
+            links: ["About Us", "Contact Us"],
         },
         {
             heading: "Join Us",
@@ -62,20 +61,6 @@ const Footer = () => {
                                 marginBottom: "14px",
                             }}
                         >
-                            <div
-                                style={{
-                                    width: "32px",
-                                    height: "32px",
-                                    borderRadius: "8px",
-                                    background: "linear-gradient(135deg, #10b981, #059669)",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    flexShrink: 0,
-                                }}
-                            >
-                                <FaGraduationCap size={17} color="#fff" />
-                            </div>
                             <span
                                 style={{
                                     fontWeight: 700,
@@ -83,7 +68,7 @@ const Footer = () => {
                                     color: "#111827",
                                 }}
                             >
-                                WeLearnGlobal
+                                WELEARN
                             </span>
                         </a>
                         <p
@@ -163,7 +148,7 @@ const Footer = () => {
                                         Become a verified tutor today.
                                     </p>
                                     <a
-                                        href="#"
+                                        href="/signup"
                                         style={{
                                             display: "inline-block",
                                             padding: "9px 20px",

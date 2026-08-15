@@ -1,11 +1,33 @@
 import { useEffect, useState } from "react";
-import { FaGraduationCap } from "react-icons/fa";
 import { FiMenu, FiX } from "react-icons/fi";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 const Navbar = () => {
+    const navigate = useNavigate();
     const [isOpen, setIsOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
+    const [hasToken, setHasToken] = useState(false);
+    const [role, setRole] = useState<string | null>(null);
+
+    useEffect(() => {
+        const checkAuth = () => {
+            const token = localStorage.getItem("welearnToken");
+            const storedRole = localStorage.getItem("welearnRole");
+            setHasToken(!!token);
+            setRole(storedRole);
+        };
+
+        checkAuth();
+
+        // Keep in sync if auth changes in another tab, or via login/logout in this tab
+        window.addEventListener("storage", checkAuth);
+        window.addEventListener("welearnTokenChange", checkAuth);
+
+        return () => {
+            window.removeEventListener("storage", checkAuth);
+            window.removeEventListener("welearnTokenChange", checkAuth);
+        };
+    }, []);
 
     useEffect(() => {
         const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -23,6 +45,17 @@ const Navbar = () => {
         { label: "Contact", href: "/contact" },
         { label: "About", href: "/about" },
     ];
+
+    const goToDashboard = () => {
+        setIsOpen(false);
+        if (role === "tutor") {
+            navigate("/tutor/dashboard/overview");
+        } else if (role === "student") {
+            navigate("/student/dashboard/overview");
+        } else {
+            navigate("/dashboard");
+        }
+    };
 
     return (
         <>
@@ -60,19 +93,6 @@ const Navbar = () => {
                             flexShrink: 0,
                         }}
                     >
-                        <div
-                            style={{
-                                width: "32px",
-                                height: "32px",
-                                borderRadius: "8px",
-                                background: "linear-gradient(135deg, #10b981, #059669)",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                            }}
-                        >
-                            <FaGraduationCap size={17} color="#fff" />
-                        </div>
                         <span
                             style={{
                                 fontFamily: "'Inter', sans-serif",
@@ -82,7 +102,7 @@ const Navbar = () => {
                                 letterSpacing: "-0.3px",
                             }}
                         >
-                            WeLearnGlobal
+                            WELEARN
                         </span>
                     </Link>
 
@@ -128,53 +148,82 @@ const Navbar = () => {
                         style={{ display: "flex", alignItems: "center", gap: "12px" }}
                         className="desktop-nav"
                     >
-                        <Link
-                            to="/login"
-                            style={{
-                                textDecoration: "none",
-                                fontFamily: "'Inter', sans-serif",
-                                fontSize: "14px",
-                                fontWeight: 500,
-                                color: "#374151",
-                                padding: "8px 16px",
-                                borderRadius: "8px",
-                                transition: "background 0.2s",
-                            }}
-                            onMouseEnter={(e) =>
-                                ((e.target as HTMLElement).style.background = "#f3f4f6")
-                            }
-                            onMouseLeave={(e) =>
-                                ((e.target as HTMLElement).style.background = "transparent")
-                            }
-                        >
-                            Log in
-                        </Link>
-                        <Link
-                            to="/signup"
-
-                            style={{
-                                textDecoration: "none",
-                                fontFamily: "'Inter', sans-serif",
-                                fontSize: "14px",
-                                fontWeight: 600,
-                                color: "#ffffff",
-                                background: "linear-gradient(135deg, #10b981, #059669)",
-                                padding: "9px 20px",
-                                borderRadius: "8px",
-                                transition: "opacity 0.2s, transform 0.2s",
-                                display: "inline-block",
-                            }}
-                            onMouseEnter={(e) => {
-                                (e.target as HTMLElement).style.opacity = "0.9";
-                                (e.target as HTMLElement).style.transform = "translateY(-1px)";
-                            }}
-                            onMouseLeave={(e) => {
-                                (e.target as HTMLElement).style.opacity = "1";
-                                (e.target as HTMLElement).style.transform = "translateY(0)";
-                            }}
-                        >
-                            Get Started
-                        </Link>
+                        {hasToken ? (
+                            <button
+                                onClick={goToDashboard}
+                                style={{
+                                    fontFamily: "'Inter', sans-serif",
+                                    fontSize: "14px",
+                                    fontWeight: 600,
+                                    color: "#ffffff",
+                                    backgroundColor: "#14532d",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    padding: "9px 20px",
+                                    borderRadius: "50px",
+                                    transition: "background-color 0.2s, transform 0.2s",
+                                }}
+                                onMouseEnter={(e) => {
+                                    (e.currentTarget as HTMLElement).style.backgroundColor = "#166534";
+                                    (e.currentTarget as HTMLElement).style.transform = "translateY(-1px)";
+                                }}
+                                onMouseLeave={(e) => {
+                                    (e.currentTarget as HTMLElement).style.backgroundColor = "#14532d";
+                                    (e.currentTarget as HTMLElement).style.transform = "translateY(0)";
+                                }}
+                            >
+                                Dashboard
+                            </button>
+                        ) : (
+                            <>
+                                <Link
+                                    to="/login"
+                                    style={{
+                                        textDecoration: "none",
+                                        fontFamily: "'Inter', sans-serif",
+                                        fontSize: "14px",
+                                        fontWeight: 500,
+                                        color: "#374151",
+                                        padding: "8px 16px",
+                                        borderRadius: "50px",
+                                        transition: "background 0.2s",
+                                    }}
+                                    onMouseEnter={(e) =>
+                                        ((e.target as HTMLElement).style.background = "#f3f4f6")
+                                    }
+                                    onMouseLeave={(e) =>
+                                        ((e.target as HTMLElement).style.background = "transparent")
+                                    }
+                                >
+                                    Log in
+                                </Link>
+                                <Link
+                                    to="/signup"
+                                    style={{
+                                        textDecoration: "none",
+                                        fontFamily: "'Inter', sans-serif",
+                                        fontSize: "14px",
+                                        fontWeight: 600,
+                                        color: "#ffffff",
+                                        backgroundColor: "#14532d",
+                                        padding: "9px 20px",
+                                        borderRadius: "8px",
+                                        transition: "background-color 0.2s, transform 0.2s",
+                                        display: "inline-block",
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        (e.target as HTMLElement).style.backgroundColor = "#166534";
+                                        (e.target as HTMLElement).style.transform = "translateY(-1px)";
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        (e.target as HTMLElement).style.backgroundColor = "#14532d";
+                                        (e.target as HTMLElement).style.transform = "translateY(0)";
+                                    }}
+                                >
+                                    Get Started
+                                </Link>
+                            </>
+                        )}
                     </div>
 
                     {/* Hamburger button */}
@@ -248,7 +297,7 @@ const Navbar = () => {
                             color: "#111827",
                         }}
                     >
-                        WeLearnGlobal
+                        WELEARN
                     </span>
                     <button
                         onClick={() => setIsOpen(false)}
@@ -301,56 +350,76 @@ const Navbar = () => {
                             {link.label}
                         </Link>
                     ))}
+                    <div
+                        style={{
+                            padding: "20px 24px",
+                            borderTop: "1px solid #f3f4f6",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "10px",
+                            opacity: isOpen ? 1 : 0,
+                            transform: isOpen ? "translateY(0)" : "translateY(10px)",
+                            transition: "opacity 0.3s ease 0.3s, transform 0.3s ease 0.3s",
+                        }}
+                    >
+                        {hasToken ? (
+                            <button
+                                onClick={goToDashboard}
+                                style={{
+                                    textAlign: "center",
+                                    padding: "12px",
+                                    borderRadius: "50px",
+                                    border: "none",
+                                    cursor: "pointer",
+                                    backgroundColor: "#14532d",
+                                    fontFamily: "'Inter', sans-serif",
+                                    fontSize: "12px",
+                                    fontWeight: 600,
+                                    color: "#ffffff",
+                                }}
+                            >
+                                Dashboard
+                            </button>
+                        ) : (
+                            <>
+                                <Link
+                                    to="/login"
+                                    onClick={() => setIsOpen(false)}
+                                    style={{
+                                        textDecoration: "none",
+                                        textAlign: "center",
+                                        padding: "12px",
+                                        borderRadius: "50px",
+                                        border: "1.5px solid #e5e7eb",
+                                        fontFamily: "'Inter', sans-serif",
+                                        fontSize: "12px",
+                                        fontWeight: 600,
+                                        color: "#374151",
+                                    }}
+                                >
+                                    Log in
+                                </Link>
+                                <Link
+                                    to="/signup"
+                                    onClick={() => setIsOpen(false)}
+                                    style={{
+                                        textDecoration: "none",
+                                        textAlign: "center",
+                                        padding: "12px",
+                                        borderRadius: "50px",
+                                        backgroundColor: "#14532d",
+                                        fontFamily: "'Inter', sans-serif",
+                                        fontSize: "12px",
+                                        fontWeight: 600,
+                                        color: "#ffffff",
+                                    }}
+                                >
+                                    Get Started
+                                </Link>
+                            </>
+                        )}
+                    </div>
                 </nav>
-
-                {/* Drawer CTA */}
-                <div
-                    style={{
-                        padding: "20px 24px",
-                        borderTop: "1px solid #f3f4f6",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "10px",
-                        opacity: isOpen ? 1 : 0,
-                        transform: isOpen ? "translateY(0)" : "translateY(10px)",
-                        transition: "opacity 0.3s ease 0.3s, transform 0.3s ease 0.3s",
-                    }}
-                >
-                    <Link
-                        to="/login"
-                        onClick={() => setIsOpen(false)}
-                        style={{
-                            textDecoration: "none",
-                            textAlign: "center",
-                            padding: "12px",
-                            borderRadius: "10px",
-                            border: "1.5px solid #e5e7eb",
-                            fontFamily: "'Inter', sans-serif",
-                            fontSize: "14px",
-                            fontWeight: 600,
-                            color: "#374151",
-                        }}
-                    >
-                        Log in
-                    </Link>
-                    <Link
-                        to="/signup"
-                        onClick={() => setIsOpen(false)}
-                        style={{
-                            textDecoration: "none",
-                            textAlign: "center",
-                            padding: "12px",
-                            borderRadius: "10px",
-                            background: "linear-gradient(135deg, #10b981, #059669)",
-                            fontFamily: "'Inter', sans-serif",
-                            fontSize: "14px",
-                            fontWeight: 600,
-                            color: "#ffffff",
-                        }}
-                    >
-                        Get Started
-                    </Link>
-                </div>
             </div>
 
             <style>{`
