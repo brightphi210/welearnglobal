@@ -288,19 +288,19 @@ const StudentOverview = () => {
 
                     {/* Categories Section — horizontally scrollable on mobile, grid from sm breakpoint up */}
                     <div className="bg-white rounded-2xl border border-gray-200 p-4 lg:p-6 mb-8 overflow-hidden">
-                        <h3 className="text-lg font-bold text-gray-900 mb-6">Explore Categories</h3>
-                        <div className="grid gap-3 overflow-x-auto sm:overflow-visible grid-cols-3 lg:grid-cols-6 w-full min-w-0 pb-2 categories-scroll">
+                        <h3 className="text-base font-bold text-gray-900 mb-4">Explore Categories</h3>
+                        <div className="grid lg:gap-3 gap-2 overflow-x-auto sm:overflow-visible grid-cols-3 lg:grid-cols-6 w-full min-w-0 pb-2 categories-scroll">
                             {categories.map(({ id, name, icon: Icon }) => (
                                 <div key={id} className="shrink-0 sm:contents">
                                     <button
                                         onClick={() => handleCategoryClick(name)}
-                                        className="flex flex-col items-center gap-3 p-4 sm:p-6 bg-gray-50 rounded-2xl border border-gray-100 hover:border-green-200 hover:shadow-md transition-all group
+                                        className="flex flex-col items-center gap-2 p-2 sm:p-6 bg-gray-50 rounded-xl border border-gray-100 hover:border-green-200 hover:shadow-md transition-all group
                                                    shrink-0 w-24 sm:w-auto"
                                     >
-                                        <div className="bg-white w-12 h-12 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform border border-gray-100 shrink-0">
+                                        <div className="bg-white w-12 h-10 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform border border-gray-100 shrink-0">
                                             <Icon size={16} className="text-green-700" />
                                         </div>
-                                        <p className="text-[11px] sm:text-xs font-semibold text-gray-900 text-center">{name}</p>
+                                        <p className="text-[10px] sm:text-xs font-semibold text-gray-900 text-center">{name}</p>
                                     </button>
                                 </div>
                             ))}
@@ -310,7 +310,7 @@ const StudentOverview = () => {
                     {/* Recommended Tutors Section */}
                     <div className="mb-8">
                         <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-lg font-bold text-gray-900">Recommended for You</h3>
+                            <h3 className="text-base font-bold text-gray-900">Available Tutors</h3>
                             <Link
                                 to="/student/dashboard/tutors"
                                 className="text-green-700 font-semibold text-sm flex items-center gap-1.5 hover:text-green-800"
