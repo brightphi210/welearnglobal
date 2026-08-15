@@ -91,14 +91,14 @@ const Home = () => {
                         <div className="flex gap-2">
                             <button
                                 onClick={() => setSessionMode("online")}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${sessionMode === "online" ? "bg-white text-green-800 border-white" : "bg-white/10 text-white border-white/30 hover:bg-white/20"
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${sessionMode === "online" ? "bg-white text-green-900 border-white" : "bg-white/10 text-white border-white/30 hover:bg-white/20"
                                     }`}
                             >
                                 <FiGlobe size={12} /> Online
                             </button>
                             <button
                                 onClick={() => setSessionMode("in-person")}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${sessionMode === "in-person" ? "bg-white text-green-800 border-white" : "bg-white/10 text-white border-white/30 hover:bg-white/20"
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${sessionMode === "in-person" ? "bg-white text-green-900 border-white" : "bg-white/10 text-white border-white/30 hover:bg-white/20"
                                     }`}
                             >
                                 <FiUser size={12} /> In-Person
@@ -162,12 +162,9 @@ const Home = () => {
                         {steps.map((s, i) => (
                             <div key={s.label} className="relative flex flex-col items-center bg-gray-50 border border-gray-100 rounded-2xl p-6 sm:p-7">
                                 <div className="relative mb-5">
-                                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-green-50 border-2 border-green-100 flex items-center justify-center">
+                                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-green-50 flex items-center justify-center">
                                         {s.icon}
                                     </div>
-                                    <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-green-700 text-white text-[10px] font-bold flex items-center justify-center">
-                                        0{i + 1}
-                                    </span>
                                 </div>
                                 <h3 className="text-base font-bold text-gray-900 mb-2">{s.label}</h3>
                                 <p className="text-sm text-gray-500 leading-relaxed text-center">{s.desc}</p>
@@ -177,16 +174,14 @@ const Home = () => {
                 </div>
             </section>
 
-            {/* ── SECURITY ── */}
             <section className="py-20 sm:py-24 px-4 sm:px-6 lg:px-8 bg-white">
                 <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-                    {/* Cards */}
                     <div className="grid grid-cols-2 gap-3 sm:gap-4 order-2 lg:order-1">
                         {trustCards.map((c) => (
                             <div
                                 key={c.title}
                                 className={`rounded-2xl p-5 sm:p-6 ${c.highlight
-                                    ? "bg-green-800"
+                                    ? "bg-green-900"
                                     : "bg-gray-50 border border-gray-100"
                                     }`}
                             >
