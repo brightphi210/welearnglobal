@@ -9,11 +9,9 @@ import {
     FiCheck,
     FiCheckCircle,
     FiClock,
-    FiCreditCard,
     FiDollarSign,
     FiGlobe,
     FiImage,
-    FiLock,
     FiMapPin,
     FiPhone,
     FiPlus,
@@ -28,7 +26,7 @@ import { useGetTutorProfile, useGetUserProfile } from "../../hooks/queries/allQu
 
 /* ─── Types ──────────────────────────────────────────────────────────── */
 type SessionMode = "online" | "onsite" | "both";
-type Step = 1 | 2 | 3 | 4;
+type Step = 1 | 2 | 3;
 // empty  -> no profile exists yet, show a call-to-action
 // view   -> profile exists, show it read-only
 // edit   -> the multi-step wizard, used for both first-time creation and updates
@@ -49,7 +47,6 @@ interface ProfileData {
     experience: ExperienceItem[]; education: EducationItem[];
     subjects: string[]; hourlyRate: string;
     availability: DayAvailability[];
-    accountName: string; bankName: string; accountNumber: string;
     averageRating: string; totalSessions: number;
     isVerified: boolean; verificationStatus: string;
 }
@@ -62,7 +59,6 @@ const STEPS = [
     { id: 1, label: "Basic Details", short: "Personal info, skills & bio" },
     { id: 2, label: "Teaching Setup", short: "Status, subjects & rate" },
     { id: 3, label: "Availability", short: "Your weekly schedule" },
-    { id: 4, label: "Banking Info", short: "Payout account & payment" },
 ];
 
 const DAYS_OF_WEEK = [
@@ -119,6 +115,21 @@ const defaultAvailability: DayAvailability[] = DAYS_OF_WEEK.map(d => ({
     slots: [],
 }));
 
+/* ─── Image validation ───────────────────────────────────────────────── */
+const MAX_IMAGE_SIZE_BYTES = 7 * 1024 * 1024; // 7MB
+const MAX_IMAGE_SIZE_LABEL = "7MB";
+const ACCEPTED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+
+const validateImageFile = (file: File): string | null => {
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+        return "Please upload a JPG, PNG or WEBP image.";
+    }
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+        return `Image should be less than ${MAX_IMAGE_SIZE_LABEL}.`;
+    }
+    return null;
+};
+
 /* ─── Banner Component ───────────────────────────────────────────────── */
 const BannerPreview = ({ imageUrl, className = "" }: { imageUrl?: string; className?: string }) => {
     if (imageUrl) {
@@ -146,7 +157,7 @@ const EmptyState = ({ onCreate }: { onCreate: () => void }) => (
             </div>
             <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 mb-2">Set up your instructor profile</h2>
             <p className="text-sm text-gray-500 mb-7 leading-relaxed">
-                You haven't created an instructor profile yet. Add your bio, subjects, and payout details so students can find and book you.
+                You haven't created an instructor profile yet. Add your bio, subjects, and availability so students can find and book you.
             </p>
             <button
                 onClick={onCreate}
@@ -248,7 +259,7 @@ const Step1 = ({
     return (
         <div className="space-y-7">
             <div>
-                <p className="text-xs font-bold text-green-700 uppercase tracking-widest mb-1">Step 1 of 4</p>
+                <p className="text-xs font-bold text-green-700 uppercase tracking-widest mb-1">Step 1 of 3</p>
                 <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 mb-1">Basic Details</h2>
                 <p className="text-sm text-gray-500">Your public profile information. Tutors with detailed profiles book 3× more sessions.</p>
             </div>
@@ -286,7 +297,7 @@ const Step1 = ({
                         onChange={handleBannerFile}
                     />
                 </div>
-                <p className="text-xs text-gray-400 mt-1.5">Upload a custom banner image to personalise your profile</p>
+                <p className="text-xs text-gray-400 mt-1.5">Upload a custom banner image to personalise your profile · Max {MAX_IMAGE_SIZE_LABEL}</p>
             </div>
 
             {/* Profile photo */}
@@ -317,7 +328,7 @@ const Step1 = ({
                             onChange={handleProfileFile}
                         />
                     </div>
-                    <p className="text-xs text-gray-400">JPG, PNG or WEBP. Max 5MB.</p>
+                    <p className="text-xs text-gray-400">JPG, PNG or WEBP. Max {MAX_IMAGE_SIZE_LABEL}.</p>
                 </div>
             </div>
 
@@ -683,7 +694,7 @@ const Step2 = ({ data, setData, disabled }: { data: ProfileData; setData: (d: Pr
     return (
         <div className="space-y-8">
             <div>
-                <p className="text-xs font-bold text-green-700 uppercase tracking-widest mb-1">Step 2 of 4</p>
+                <p className="text-xs font-bold text-green-700 uppercase tracking-widest mb-1">Step 2 of 3</p>
                 <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 mb-1">Teaching Setup</h2>
                 <p className="text-sm text-gray-500">Your teaching mode, subjects, rate, experience, and education.</p>
             </div>
@@ -852,83 +863,13 @@ const Step2 = ({ data, setData, disabled }: { data: ProfileData; setData: (d: Pr
 const Step3Availability = ({ data, setData, disabled }: { data: ProfileData; setData: (d: ProfileData) => void; disabled?: boolean }) => (
     <div className="space-y-7">
         <div>
-            <p className="text-xs font-bold text-green-700 uppercase tracking-widest mb-1">Step 3 of 4</p>
+            <p className="text-xs font-bold text-green-700 uppercase tracking-widest mb-1">Step 3 of 3</p>
             <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 mb-1">Availability</h2>
             <p className="text-sm text-gray-500">Set the days and time slots when students can book sessions with you.</p>
         </div>
         <AvailabilitySection data={data} setData={setData} disabled={disabled} />
     </div>
 );
-
-/* ─── Step 4: Banking Info ───────────────────────────────────────────── */
-const Step4 = ({ data, setData }: { data: ProfileData; setData: (d: ProfileData) => void }) => {
-    const [showNumber, setShowNumber] = useState(false);
-
-    return (
-        <div className="space-y-7">
-            <div>
-                <p className="text-xs font-bold text-green-700 uppercase tracking-widest mb-1">Step 4 of 4</p>
-                <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 mb-1">Banking Info</h2>
-                <p className="text-sm text-gray-500">Where should we send your earnings? All details are encrypted and never visible to students.</p>
-            </div>
-
-            <div className="space-y-5">
-
-                <div>
-                    <label className="block text-sm font-semibold text-gray-800 mb-2">Account holder name</label>
-                    <div className={fieldCls}>
-                        <FiUser size={15} className="text-gray-400 shrink-0" />
-                        <input className={inpCls} placeholder="Full legal name as it appears on your bank account"
-                            value={data.accountName}
-                            type="text"
-                            onChange={e => setData({ ...data, accountName: e.target.value })} />
-                    </div>
-                </div>
-
-                {/* Bank name */}
-                <div>
-                    <label className="block text-sm font-semibold text-gray-800 mb-2">Bank name</label>
-                    <div className={fieldCls}>
-                        <FiCreditCard size={15} className="text-gray-400 shrink-0" />
-                        <input className={inpCls} placeholder="e.g. Chase, Barclays"
-                            value={data.bankName}
-                            type="text"
-                            onChange={e => setData({ ...data, bankName: e.target.value })} />
-                    </div>
-                </div>
-
-                {/* Account number */}
-                <div>
-                    <label className="block text-sm font-semibold text-gray-800 mb-2">Account number</label>
-                    <div className={fieldCls}>
-                        <FiLock size={15} className="text-gray-400 shrink-0" />
-                        <input
-                            type={showNumber ? "text" : "password"}
-                            // inputMode="numeric"
-                            className={inpCls}
-                            placeholder="Enter your account number"
-                            value={data.accountNumber}
-                            onChange={e => setData({ ...data, accountNumber: e.target.value.replace(/\D/g, "") })}
-                        />
-                        <button
-                            type="button"
-                            onClick={() => setShowNumber(v => !v)}
-                            className="text-gray-400 hover:text-gray-600 transition-colors bg-transparent border-none cursor-pointer p-0 shrink-0"
-                        >
-                            {showNumber
-                                ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" /><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" /><line x1="1" y1="1" x2="23" y2="23" /></svg>
-                                : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
-                            }
-                        </button>
-                    </div>
-                    <p className="text-xs text-gray-400 mt-1.5 flex items-center gap-1">
-                        <FiLock size={10} /> Masked for your security · numbers only
-                    </p>
-                </div>
-            </div>
-        </div>
-    );
-};
 
 function safeParseArray<T extends Record<string, any>>(value: unknown): (T & { id: number })[] {
     let arr: any[] = [];
@@ -1017,7 +958,6 @@ const emptyProfileData: ProfileData = {
     education: [],
     subjects: [], hourlyRate: "",
     availability: defaultAvailability,
-    accountName: "", bankName: "", accountNumber: "",
     averageRating: "0.00", totalSessions: 0,
     isVerified: false, verificationStatus: "pending",
 };
@@ -1051,19 +991,11 @@ const validateStep3 = (d: ProfileData): string | null => {
     return null;
 };
 
-const validateStep4 = (d: ProfileData): string | null => {
-    if (!d.accountName.trim()) return "Please add the account holder name.";
-    if (!d.bankName.trim()) return "Please add your bank name.";
-    if (!d.accountNumber.trim()) return "Please add your account number.";
-    return null;
-};
-
 const getStepError = (step: Step, d: ProfileData): string | null => {
     switch (step) {
         case 1: return validateStep1(d);
         case 2: return validateStep2(d);
         case 3: return validateStep3(d);
-        case 4: return validateStep4(d);
         default: return null;
     }
 };
@@ -1106,19 +1038,23 @@ const TutorProfile = () => {
     const [bannerImageFile, setBannerImageFile] = useState<File | null>(null);
 
     const handleProfileImageChange = (file: File) => {
-        if (file.size > 5 * 1024 * 1024) {
-            setErrorMessage("Profile image should be less than 5MB");
+        const err = validateImageFile(file);
+        if (err) {
+            setErrorMessage(`Profile image: ${err}`);
             return;
         }
+        setErrorMessage("");
         setProfileImageFile(file);
         setProfileImagePreview(URL.createObjectURL(file));
     };
 
     const handleBannerImageChange = (file: File) => {
-        if (file.size > 5 * 1024 * 1024) {
-            setErrorMessage("Banner image should be less than 5MB");
+        const err = validateImageFile(file);
+        if (err) {
+            setErrorMessage(`Banner image: ${err}`);
             return;
         }
+        setErrorMessage("");
         setBannerImageFile(file);
         setBannerImagePreview(URL.createObjectURL(file));
     };
@@ -1145,10 +1081,6 @@ const TutorProfile = () => {
     useEffect(() => {
         if (!tutor) return;
 
-        const paymentInfo = typeof tutor.payment_info === "string"
-            ? (() => { try { return JSON.parse(tutor.payment_info); } catch { return {}; } })()
-            : (tutor.payment_info || {});
-
         const availabilitySource = tutor.availability_slots ?? tutor.availability;
 
         setData(prev => ({
@@ -1169,9 +1101,6 @@ const TutorProfile = () => {
             availability: availabilitySource !== undefined
                 ? normalizeAvailability(availabilitySource)
                 : prev.availability,
-            accountName: paymentInfo.account_name ?? prev.accountName,
-            bankName: paymentInfo.bank_name ?? prev.bankName,
-            accountNumber: paymentInfo.account_number ?? prev.accountNumber,
             averageRating: tutor.average_rating ?? prev.averageRating,
             totalSessions: typeof tutor.total_sessions === "number" ? tutor.total_sessions : prev.totalSessions,
             isVerified: typeof tutor.is_verified === "boolean" ? tutor.is_verified : prev.isVerified,
@@ -1186,8 +1115,7 @@ const TutorProfile = () => {
     const isStep1Done = !validateStep1(data);
     const isStep2Done = !validateStep2(data);
     const isStep3Done = !validateStep3(data);
-    const isStep4Done = !validateStep4(data);
-    const pct = Math.round([isStep1Done, isStep2Done, isStep3Done, isStep4Done].filter(Boolean).length / 4 * 100);
+    const pct = Math.round([isStep1Done, isStep2Done, isStep3Done].filter(Boolean).length / 3 * 100);
 
     // Build the availability payload in the backend's expected shape:
     // [{ day_of_week: "Monday", start_time: "09:00:00", end_time: "11:00:00", is_booked: false }]
@@ -1222,11 +1150,6 @@ const TutorProfile = () => {
             experience: data.experience.map(({ id, ...rest }) => rest),
             education: data.education.map(({ id, ...rest }) => rest),
             availability: availabilityPayload,
-            payment_info: {
-                account_name: data.accountName,
-                bank_name: data.bankName,
-                account_number: data.accountNumber,
-            },
         };
 
         console.log("TutorProfile availability payload:", availabilityPayload);
@@ -1248,6 +1171,17 @@ const TutorProfile = () => {
 
     const handleSave = () => {
         setErrorMessage("");
+
+        // Final guard: re-validate any pending image files before submitting
+        if (profileImageFile) {
+            const err = validateImageFile(profileImageFile);
+            if (err) { setErrorMessage(`Profile image: ${err}`); return; }
+        }
+        if (bannerImageFile) {
+            const err = validateImageFile(bannerImageFile);
+            if (err) { setErrorMessage(`Banner image: ${err}`); return; }
+        }
+
         const payload = buildPayload();
 
         const hasNewImage = !!profileImageFile || !!bannerImageFile;
@@ -1272,7 +1206,7 @@ const TutorProfile = () => {
     // Validates every step before submitting. If any step is incomplete,
     // jumps to the first incomplete step and shows the relevant error.
     const handlePublish = () => {
-        for (let s = 1; s <= 4; s++) {
+        for (let s = 1; s <= 3; s++) {
             const err = getStepError(s as Step, data);
             if (err) {
                 setErrorMessage(err);
@@ -1291,7 +1225,7 @@ const TutorProfile = () => {
             return;
         }
         setErrorMessage("");
-        setStep(s => Math.min(4, s + 1) as Step);
+        setStep(s => Math.min(3, s + 1) as Step);
     };
 
     // Jumping directly to a step (via sidebar nav or dots) is only allowed
@@ -1372,7 +1306,7 @@ const TutorProfile = () => {
                     <div className="lg:col-span-1 flex flex-col gap-5 lg:sticky lg:top-8 order-2 lg:order-1">
                         <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5">
                             {STEPS.map(s => {
-                                const done = s.id === 1 ? isStep1Done : s.id === 2 ? isStep2Done : s.id === 3 ? isStep3Done : isStep4Done;
+                                const done = s.id === 1 ? isStep1Done : s.id === 2 ? isStep2Done : isStep3Done;
                                 const active = step === s.id;
                                 return (
                                     <button key={s.id} onClick={() => goToStep(s.id as Step)}
@@ -1408,7 +1342,6 @@ const TutorProfile = () => {
                             )}
                             {step === 2 && <Step2 data={data} setData={setData} disabled={isPending} />}
                             {step === 3 && <Step3Availability data={data} setData={setData} disabled={isPending} />}
-                            {step === 4 && <Step4 data={data} setData={setData} />}
 
                             {/* Nav footer */}
                             <div className="flex flex-wrap items-center justify-between gap-3 pt-6 mt-8 border-t border-gray-100">
@@ -1425,7 +1358,7 @@ const TutorProfile = () => {
                                     ))}
                                 </div>
 
-                                {step < 4 ? (
+                                {step < 3 ? (
                                     <button onClick={goNext}
                                         className="flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-green-700 text-white rounded-full text-sm font-semibold hover:bg-green-800 transition-all order-2 sm:order-3">
                                         Continue <FiArrowRight size={14} />
