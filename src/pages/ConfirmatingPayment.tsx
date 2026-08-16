@@ -10,9 +10,6 @@ interface ConfirmingPaymentProps {
 }
 
 const ConfirmingPayment = ({
-    amount = "49.00",
-    tutorName = "Sarah Johnson",
-    subject = "Advanced Calculus",
     onDone,
 }: ConfirmingPaymentProps) => {
     const [status, setStatus] = useState<"confirming" | "success">("confirming");
