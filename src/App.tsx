@@ -13,7 +13,9 @@ import Contact from './pages/Contact'
 import Home from './pages/Home'
 import How from './pages/How'
 import Login from './pages/Login'
+import RegisterSuccessful from './pages/RegisterSuccessful'
 import Signup from './pages/Signup'
+import VerifyEmail from './pages/VerifyEmail'
 import AuthProvider from './providers/AuthProvider'
 import ProtectedRoute from './providers/ProtectedRoute'
 
@@ -26,10 +28,12 @@ const App = () => {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/about" element={<About />} />
             <Route path="/how-it-works" element={<How />} />
             <Route path='confirmation/payment' element={<ConfirmingPayment />} />
+            <Route path="/register-successful" element={<RegisterSuccessful />} />
 
 
             <Route

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   FiArrowRight,
   FiCalendar,
@@ -96,10 +96,162 @@ const sessionTypeBadge: Record<string, string> = {
   onsite: "bg-orange-50 text-orange-700",
 };
 
+// BookingCard now lives outside BookedTutorClass. It was previously declared
+// inside the parent's render, so it got recreated as a new component "type"
+// every time BookedTutorClass re-rendered (e.g. on each keystroke in search).
+// That reset each card's internal state (imgError) and remounted its DOM
+// every render — wasteful, and the same class of bug that broke your filter
+// inputs on the tutors page.
+const BookingCard = ({
+  booking,
+  onOpenSessionDetails,
+}: {
+  booking: any;
+  onOpenSessionDetails: (booking: RawBooking) => void;
+}) => {
+  const [imgError, setImgError] = useState(false);
+
+  const { getPaymentUrl, isLoading: isPaying } = useMakePayment(booking.id);
+
+  const handlePayment = async () => {
+    try {
+      const response = await getPaymentUrl;
+      const url = response?.data?.checkout_url;
+
+      if (!url) {
+        toast("No payment link was returned. Please try again.", { type: "error" });
+        return;
+      }
+
+      window.location.href = url;
+    } catch (error) {
+      console.error("Payment error:", error);
+      toast("Something went wrong starting your payment. Please try again.", {
+        type: "error",
+      });
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-5 overflow-hidden">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {booking.tutor_profile.profile_image && !imgError ? (
+            <img
+              src={booking.tutor_profile.profile_image}
+              alt={booking.tutor_profile.full_name}
+              onError={() => setImgError(true)}
+              className="w-10 h-10 rounded-full object-cover shrink-0"
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-white font-bold shrink-0">
+              {getInitials(booking.tutor_profile.full_name)}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="font-bold text-gray-900 text-sm leading-snug truncate">
+              {booking.tutor_profile.full_name}
+            </p>
+            <p className="text-xs text-gray-600 wrap-break-word">{booking.subject}</p>
+          </div>
+        </div>
+
+        <span
+          className={`shrink-0 px-3 py-1 rounded-full text-[10px] font-semibold ${statusBadge[booking.status] ?? "bg-gray-100 text-gray-700"
+            }`}
+        >
+          {booking.status_display}
+        </span>
+      </div>
+
+      <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-gray-100 text-xs text-gray-600">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="flex items-center gap-1.5 min-w-0">
+            <FiCalendar size={13} />
+            <span className="truncate">{formatDate(booking.scheduled_date)}</span>
+          </span>
+          <span className="flex items-center gap-1.5 min-w-0">
+            <FiClock size={13} />
+            <span className="truncate">
+              {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+            </span>
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+
+          <div>
+            <span
+              className={`px-2 py-1 rounded-full text-[11px] font-semibold ${sessionTypeBadge[booking.session_type] ?? "bg-gray-100 text-gray-700"
+                }`}
+            >
+              {booking.session_type_display}
+            </span>
+
+            <span
+              className={`px-2 py-1 rounded-full text-[11px] font-semibold ${sessionTypeBadge[booking.session_type] ?? "bg-gray-100 text-gray-700"
+                }`}
+            >
+              Duration: {(booking as any).duration}days
+            </span>
+          </div>
+
+          <span className="text-base font-semibold text-gray-700">
+            ₦{booking.total_amount}
+          </span>
+        </div>
+      </div>
+
+      {booking.notes && (
+        <div className="mt-3 rounded-xl bg-gray-50 p-3 text-xs text-gray-600 wrap-break-word">
+          <p className="font-semibold text-gray-700 mb-1">Notes</p>
+          <p>{booking.notes}</p>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-2 mt-4">
+        {booking.status === "accepted" && (
+          <button
+            onClick={handlePayment}
+            disabled={isPaying}
+            className="w-full flex items-center justify-center gap-1.5 px-4 cursor-pointer py-3 bg-green-900 text-white rounded-full text-xs font-semibold hover:bg-green-800 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {isPaying ? "Processing..." : "Proceed to Payment"}
+          </button>
+        )}
+
+        {booking.status === "payment_confirmed" && (
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button
+              onClick={() => onOpenSessionDetails(booking)}
+              className="flex-1 flex items-center justify-center gap-1.5 px-4 py-3 bg-green-900 text-white rounded-full text-xs font-semibold hover:bg-green-800 transition-all"
+            >
+              <FiVideo size={14} />
+              View Session
+            </button>
+          </div>
+        )}
+
+        {booking.status === "pending" && (
+          <button className="w-full px-4 py-3 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold cursor-default">
+            Awaiting Confirmation
+          </button>
+        )}
+
+        {booking.status === "cancelled" && (
+          <button className="w-full px-4 py-3.5 border border-gray-300 text-gray-500 rounded-full text-sm font-semibold hover:bg-gray-50 transition-all">
+            View Details
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const BookedTutorClass = () => {
   const [activeTab, setActiveTab] = useState<"confirmed" | "pending" | "cancelled">(
     "confirmed"
   );
+  const [searchTerm, setSearchTerm] = useState("");
   const [sessionDetailsOpen, setSessionDetailsOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<RawBooking | null>(null);
 
@@ -108,21 +260,31 @@ const BookedTutorClass = () => {
     ? myBookingsAsUser.data
     : [];
 
-  console.log("This is bookings of users", bookings);
-
   const countForTab = (tab: keyof typeof TAB_STATUS_MAP) =>
-    bookings.filter((b: any) => TAB_STATUS_MAP[tab]?.includes(b.status)).length;
+    bookings.filter((b) => TAB_STATUS_MAP[tab]?.includes(b.status)).length;
 
-  const filteredBookings = bookings.filter((b: any) =>
-    TAB_STATUS_MAP[activeTab].includes(b.status)
-  );
+  // Search matches tutor name or subject, case-insensitive, on top of the
+  // active status tab.
+  const filteredBookings = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+
+    return bookings.filter((b) => {
+      const matchesTab = TAB_STATUS_MAP[activeTab].includes(b.status);
+      if (!matchesTab) return false;
+
+      if (!query) return true;
+
+      const tutorName = (b.tutor_profile?.full_name || "").toLowerCase();
+      const subject = (b.subject || "").toLowerCase();
+      return tutorName.includes(query) || subject.includes(query);
+    });
+  }, [bookings, activeTab, searchTerm]);
 
   const tabs = [
     { id: "confirmed", label: "Confirmed", count: countForTab("confirmed") },
     { id: "pending", label: "Pending", count: countForTab("pending") },
     { id: "cancelled", label: "Cancelled", count: countForTab("cancelled") },
   ] as const;
-
 
   const openSessionDetails = (booking: RawBooking) => {
     setSelectedSession(booking);
@@ -136,145 +298,6 @@ const BookedTutorClass = () => {
       return;
     }
     window.open(link, "_blank", "noopener,noreferrer");
-  };
-
-  const BookingCard = ({ booking }: any) => {
-    const [imgError, setImgError] = useState(false);
-
-    const { getPaymentUrl, isLoading: isPaying } = useMakePayment(booking.id);
-
-    const handlePayment = async () => {
-      try {
-        const response = await getPaymentUrl;
-        const url = response?.data?.checkout_url;
-
-        if (!url) {
-          toast("No payment link was returned. Please try again.", { type: "error" });
-          return;
-        }
-
-        window.location.href = url;
-      } catch (error) {
-        console.error("Payment error:", error);
-        toast("Something went wrong starting your payment. Please try again.", {
-          type: "error",
-        });
-      }
-    };
-
-    return (
-      <div className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-5 overflow-hidden">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            {booking.tutor_profile.profile_image && !imgError ? (
-              <img
-                src={booking.tutor_profile.profile_image}
-                alt={booking.tutor_profile.full_name}
-                onError={() => setImgError(true)}
-                className="w-10 h-10 rounded-full object-cover shrink-0"
-              />
-            ) : (
-              <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-white font-bold shrink-0">
-                {getInitials(booking.tutor_profile.full_name)}
-              </div>
-            )}
-            <div className="min-w-0 flex-1">
-              <p className="font-bold text-gray-900 text-sm leading-snug truncate">
-                {booking.tutor_profile.full_name}
-              </p>
-              <p className="text-xs text-gray-600 wrap-break-word">{booking.subject}</p>
-            </div>
-          </div>
-
-          <span
-            className={`shrink-0 px-3 py-1 rounded-full text-[10px] font-semibold ${statusBadge[booking.status] ?? "bg-gray-100 text-gray-700"
-              }`}
-          >
-            {booking.status_display}
-          </span>
-        </div>
-
-        <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-gray-100 text-xs text-gray-600">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="flex items-center gap-1.5 min-w-0">
-              <FiCalendar size={13} />
-              <span className="truncate">{formatDate(booking.scheduled_date)}</span>
-            </span>
-            <span className="flex items-center gap-1.5 min-w-0">
-              <FiClock size={13} />
-              <span className="truncate">
-                {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
-              </span>
-            </span>
-          </div>
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-
-            <div>
-              <span
-                className={`px-2 py-1 rounded-full text-[11px] font-semibold ${sessionTypeBadge[booking.session_type] ?? "bg-gray-100 text-gray-700"
-                  }`}
-              >
-                {booking.session_type_display}
-              </span>
-
-              <span
-                className={`px-2 py-1 rounded-full text-[11px] font-semibold ${sessionTypeBadge[booking.session_type] ?? "bg-gray-100 text-gray-700"
-                  }`}
-              >
-                Duration: {booking.duration}days
-              </span>
-            </div>
-
-            <span className="text-base font-semibold text-gray-700">
-              ₦{booking.total_amount}
-            </span>
-          </div>
-        </div>
-
-        {booking.notes && (
-          <div className="mt-3 rounded-xl bg-gray-50 p-3 text-xs text-gray-600 wrap-break-word">
-            <p className="font-semibold text-gray-700 mb-1">Notes</p>
-            <p>{booking.notes}</p>
-          </div>
-        )}
-
-        <div className="flex flex-col gap-2 mt-4">
-          {booking.status === "accepted" && (
-            <button
-              onClick={handlePayment}
-              disabled={isPaying}
-              className="w-full flex items-center justify-center gap-1.5 px-4 cursor-pointer py-3 bg-green-900 text-white rounded-full text-xs font-semibold hover:bg-green-800 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-            >
-              {isPaying ? "Processing..." : "Proceed to Payment"}
-            </button>
-          )}
-
-          {booking.status === "payment_confirmed" && (
-            <div className="flex flex-col sm:flex-row gap-2">
-              <button
-                onClick={() => openSessionDetails(booking)}
-                className="flex-1 flex items-center justify-center gap-1.5 px-4 py-3 bg-green-900 text-white rounded-full text-xs font-semibold hover:bg-green-800 transition-all"
-              >
-                <FiVideo size={14} />
-                View Session
-              </button>
-            </div>
-          )}
-
-          {booking.status === "pending" && (
-            <button className="w-full px-4 py-3 bg-gray-100 text-gray-600 rounded-full text-xs font-semibold cursor-default">
-              Awaiting Confirmation
-            </button>
-          )}
-
-          {booking.status === "cancelled" && (
-            <button className="w-full px-4 py-3.5 border border-gray-300 text-gray-500 rounded-full text-sm font-semibold hover:bg-gray-50 transition-all">
-              View Details
-            </button>
-          )}
-        </div>
-      </div>
-    );
   };
 
   return (
@@ -299,8 +322,18 @@ const BookedTutorClass = () => {
             <input
               type="text"
               placeholder="Search by tutor or subject"
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-full text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-200"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              className="w-full pl-10 pr-9 py-2.5 border border-gray-300 rounded-full text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-200"
             />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <FiX size={14} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -333,8 +366,12 @@ const BookedTutorClass = () => {
           </div>
         ) : filteredBookings.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-4">
-            {filteredBookings.map((booking: any) => (
-              <BookingCard key={booking.id} booking={booking} />
+            {filteredBookings.map((booking) => (
+              <BookingCard
+                key={booking.id}
+                booking={booking}
+                onOpenSessionDetails={openSessionDetails}
+              />
             ))}
           </div>
         ) : (
@@ -343,14 +380,16 @@ const BookedTutorClass = () => {
               <FiCalendar size={22} className="text-gray-400" />
             </div>
             <h3 className="font-bold text-gray-900 text-base mb-1">
-              No {activeTab} bookings
+              {searchTerm ? "No matching bookings" : `No ${activeTab} bookings`}
             </h3>
             <p className="text-sm text-gray-500 mb-6">
-              {activeTab === "confirmed"
-                ? "Book a session with a tutor to see it here."
-                : "Bookings in this category will show up here once available."}
+              {searchTerm
+                ? "Try a different tutor name or subject."
+                : activeTab === "confirmed"
+                  ? "Book a session with a tutor to see it here."
+                  : "Bookings in this category will show up here once available."}
             </p>
-            {activeTab === "confirmed" && (
+            {activeTab === "confirmed" && !searchTerm && (
               <button className="px-6 py-2.5 bg-green-700 text-white rounded-full font-semibold text-sm hover:bg-green-800 transition-all">
                 Find a Tutor
               </button>

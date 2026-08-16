@@ -57,7 +57,7 @@ const Signup = () => {
                 onSuccess: () => {
                     toast.success("Account created successfully!");
                     setTimeout(() => {
-                        navigate("/login");
+                        navigate("/register-successful", { state: { email } });
                     }, 1000);
                 },
                 onError: (e: any) => {
