@@ -237,7 +237,7 @@ export const useGetWalletData = () => {
         queryKey: ["wallet"],
         queryFn: async () => {
             const token = (await localStorage.getItem("welearnToken")) || "";
-            return get_requests(`tutors/my-profile/wallet/`, token);
+            return get_requests(`wallets`, token);
         },
     });
 
@@ -250,12 +250,13 @@ export const useGetWalletData = () => {
     };
 };
 
+
 export const useGetTransactionData = () => {
     const { data, isLoading, isError, isFetched, refetch } = useQuery({
         queryKey: ["transaction"],
         queryFn: async () => {
             const token = (await localStorage.getItem("welearnToken")) || "";
-            return get_requests(`tutors/my-profile/transactions/`, token);
+            return get_requests(`wallets/transactions`, token);
         },
     });
 

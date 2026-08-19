@@ -6,7 +6,6 @@ import {
     FiAward,
     FiBook,
     FiBriefcase,
-    FiCheck,
     FiCheckCircle,
     FiClock,
     FiDollarSign,
@@ -20,6 +19,7 @@ import {
     FiUser,
     FiX
 } from "react-icons/fi";
+import { toast, ToastContainer } from "react-toastify";
 import LoadingOverlay from "../../components/LoadingOverlay";
 import { useUpdateTutorProfile } from "../../hooks/mutations/auth";
 import { useGetTutorProfile, useGetUserProfile } from "../../hooks/queries/allQueries";
@@ -128,6 +128,86 @@ const validateImageFile = (file: File): string | null => {
         return `Image should be less than ${MAX_IMAGE_SIZE_LABEL}.`;
     }
     return null;
+};
+
+/* ─── Time helpers ───────────────────────────────────────────────────── */
+// All times are stored internally as 24hr "HH:MM" strings. The picker itself
+// is always rendered in 12hr format with an explicit AM/PM toggle, so the
+// displayed value never depends on the browser/OS locale the way a native
+// <input type="time"> does.
+const to12Hour = (time24: string): { hour: number; minute: number; period: "AM" | "PM" } => {
+    if (!time24) return { hour: 9, minute: 0, period: "AM" };
+    const [hStr, mStr] = time24.split(":");
+    const hours = parseInt(hStr, 10) || 0;
+    const minutes = parseInt(mStr, 10) || 0;
+    const period: "AM" | "PM" = hours >= 12 ? "PM" : "AM";
+    let hour12 = hours % 12;
+    if (hour12 === 0) hour12 = 12;
+    return { hour: hour12, minute: minutes, period };
+};
+
+const to24Hour = (hour12: number, minute: number, period: "AM" | "PM"): string => {
+    let hours = hour12 % 12;
+    if (period === "PM") hours += 12;
+    return `${String(hours).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+};
+
+const HOURS_12 = Array.from({ length: 12 }, (_, i) => i + 1); // 1..12
+const MINUTES_5MIN = Array.from({ length: 12 }, (_, i) => i * 5); // 0,5,...,55
+
+interface TimePickerInputProps {
+    value: string;
+    onChange: (value: string) => void;
+    disabled?: boolean;
+}
+
+// A 12hr time picker with an explicit, always-visible AM/PM toggle so the
+// period never has to be inferred/guessed by the user or the browser.
+const TimePickerInput = ({ value, onChange, disabled }: TimePickerInputProps) => {
+    const { hour, minute, period } = to12Hour(value);
+
+    const update = (h: number, m: number, p: "AM" | "PM") => onChange(to24Hour(h, m, p));
+
+    const selectCls = "border border-gray-200 rounded-lg px-1.5 py-2 text-xs text-gray-700 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all disabled:opacity-60 bg-white";
+
+    return (
+        <div className="flex items-center gap-1 flex-1 min-w-[170px]">
+            <select
+                disabled={disabled}
+                value={hour}
+                onChange={e => update(parseInt(e.target.value, 10), minute, period)}
+                className={selectCls}
+                aria-label="Hour"
+            >
+                {HOURS_12.map(h => <option key={h} value={h}>{h}</option>)}
+            </select>
+            <span className="text-xs text-gray-400 shrink-0">:</span>
+            <select
+                disabled={disabled}
+                value={minute}
+                onChange={e => update(hour, parseInt(e.target.value, 10), period)}
+                className={selectCls}
+                aria-label="Minute"
+            >
+                {MINUTES_5MIN.map(m => <option key={m} value={m}>{String(m).padStart(2, "0")}</option>)}
+            </select>
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden shrink-0">
+                {(["AM", "PM"] as const).map(p => (
+                    <button
+                        key={p}
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => update(hour, minute, p)}
+                        className={`px-2 py-2 text-[10px] font-bold transition-all ${period === p
+                            ? (p === "AM" ? "bg-amber-500 text-white" : "bg-indigo-500 text-white")
+                            : "bg-white text-gray-400 hover:bg-gray-50"}`}
+                    >
+                        {p}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
 };
 
 /* ─── Banner Component ───────────────────────────────────────────────── */
@@ -493,9 +573,17 @@ const MiniForm = ({ title, onClose, onAdd, disabled, children }: MiniFormProps) 
 
 const emptyTimeSlot = (id: number): TimeSlot => ({ id, startTime: "09:00", endTime: "10:00", isBooked: false });
 
+interface AvailabilitySectionProps {
+    data: ProfileData;
+    setData: (d: ProfileData) => void;
+    disabled?: boolean;
+    slotErrors?: Record<string, string[]>;
+    onClearSlotError?: (day: string, slotId: number) => void;
+}
+
 const AvailabilitySection = ({
-    data, setData, disabled,
-}: { data: ProfileData; setData: (d: ProfileData) => void; disabled?: boolean }) => {
+    data, setData, disabled, slotErrors = {}, onClearSlotError,
+}: AvailabilitySectionProps) => {
 
     const updateDay = (dayKey: string, updater: (d: DayAvailability) => DayAvailability) => {
         setData({
@@ -533,6 +621,7 @@ const AvailabilitySection = ({
             ...d,
             slots: d.slots.map(s => s.id === slotId ? { ...s, [field]: value } : s),
         }));
+        onClearSlotError?.(dayKey, slotId);
     };
 
     const applyToAllDays = (dayKey: string) => {
@@ -611,37 +700,46 @@ const AvailabilitySection = ({
                             {/* Time slots */}
                             {dayAv.enabled && (
                                 <div className="mt-3 flex flex-col gap-2">
-                                    {dayAv.slots.map(slot => (
-                                        <div key={slot.id} className="flex items-center gap-2">
-                                            <input
-                                                type="time"
-                                                disabled={disabled || !!slot.isBooked}
-                                                value={slot.startTime}
-                                                onChange={e => updateSlot(dayAv.day, slot.id, "startTime", e.target.value)}
-                                                className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2.5 py-2 text-xs text-gray-700 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all disabled:opacity-60"
-                                            />
-                                            <span className="text-xs text-gray-400 shrink-0">to</span>
-                                            <input
-                                                type="time"
-                                                disabled={disabled || !!slot.isBooked}
-                                                value={slot.endTime}
-                                                onChange={e => updateSlot(dayAv.day, slot.id, "endTime", e.target.value)}
-                                                className="flex-1 min-w-0 border border-gray-200 rounded-lg px-2.5 py-2 text-xs text-gray-700 outline-none focus:border-green-500 focus:ring-2 focus:ring-green-100 transition-all disabled:opacity-60"
-                                            />
-                                            {slot.isBooked ? (
-                                                <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-1 shrink-0">Booked</span>
-                                            ) : (
-                                                <button
-                                                    type="button"
-                                                    disabled={disabled}
-                                                    onClick={() => removeSlot(dayAv.day, slot.id)}
-                                                    className="p-1.5 text-gray-300 hover:text-red-400 transition-colors shrink-0"
-                                                >
-                                                    <FiTrash2 size={13} />
-                                                </button>
-                                            )}
-                                        </div>
-                                    ))}
+                                    {dayAv.slots.map(slot => {
+                                        const errKey = `${dayAv.day}-${slot.id}`;
+                                        const errors = slotErrors[errKey];
+
+                                        return (
+                                            <div key={slot.id} className="flex flex-col gap-1.5">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <TimePickerInput
+                                                        value={slot.startTime}
+                                                        disabled={disabled || !!slot.isBooked}
+                                                        onChange={v => updateSlot(dayAv.day, slot.id, "startTime", v)}
+                                                    />
+
+                                                    <span className="text-xs text-gray-400 shrink-0">to</span>
+
+                                                    <TimePickerInput
+                                                        value={slot.endTime}
+                                                        disabled={disabled || !!slot.isBooked}
+                                                        onChange={v => updateSlot(dayAv.day, slot.id, "endTime", v)}
+                                                    />
+
+                                                    {slot.isBooked ? (
+                                                        <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 border border-amber-200 rounded-full px-2 py-1 shrink-0">Booked</span>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            disabled={disabled}
+                                                            onClick={() => removeSlot(dayAv.day, slot.id)}
+                                                            className="p-1.5 text-gray-300 hover:text-red-400 transition-colors shrink-0"
+                                                        >
+                                                            <FiTrash2 size={13} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                {errors && errors.length > 0 && (
+                                                    <p className="text-[11px] font-medium text-red-500">{errors.join(" ")}</p>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                     {atMax && (
                                         <p className="text-[11px] text-gray-400 italic">Maximum {MAX_SLOTS_PER_DAY} slots reached for this day</p>
                                     )}
@@ -860,14 +958,28 @@ const Step2 = ({ data, setData, disabled }: { data: ProfileData; setData: (d: Pr
 };
 
 /* ─── Step 3: Availability (its own dedicated step/page) ─────────────── */
-const Step3Availability = ({ data, setData, disabled }: { data: ProfileData; setData: (d: ProfileData) => void; disabled?: boolean }) => (
+interface Step3AvailabilityProps {
+    data: ProfileData;
+    setData: (d: ProfileData) => void;
+    disabled?: boolean;
+    slotErrors?: Record<string, string[]>;
+    onClearSlotError?: (day: string, slotId: number) => void;
+}
+
+const Step3Availability = ({ data, setData, disabled, slotErrors, onClearSlotError }: Step3AvailabilityProps) => (
     <div className="space-y-7">
         <div>
             <p className="text-xs font-bold text-green-700 uppercase tracking-widest mb-1">Step 3 of 3</p>
             <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 mb-1">Availability</h2>
             <p className="text-sm text-gray-500">Set the days and time slots when students can book sessions with you.</p>
         </div>
-        <AvailabilitySection data={data} setData={setData} disabled={disabled} />
+        <AvailabilitySection
+            data={data}
+            setData={setData}
+            disabled={disabled}
+            slotErrors={slotErrors}
+            onClearSlotError={onClearSlotError}
+        />
     </div>
 );
 
@@ -1000,18 +1112,49 @@ const getStepError = (step: Step, d: ProfileData): string | null => {
     }
 };
 
+/* ─── Backend error helpers ──────────────────────────────────────────── */
+// Pulls every string message out of a DRF-style error object, regardless of
+// the field name(s) used (e.g. "non_field_errors", "start_time", etc).
+const extractMessages = (entry: unknown): string[] => {
+    if (!entry || typeof entry !== "object") return [];
+    const messages: string[] = [];
+    Object.values(entry as Record<string, unknown>).forEach(v => {
+        if (Array.isArray(v)) {
+            v.forEach(m => { if (typeof m === "string") messages.push(m); });
+        } else if (typeof v === "string") {
+            messages.push(v);
+        }
+    });
+    return messages;
+};
+
 /* ─── Main ───────────────────────────────────────────────────────────── */
 const TutorProfile = () => {
     const [mode, setMode] = useState<PageMode>("view");
     const modeInitialized = useRef(false);
 
     const [step, setStep] = useState<Step>(1);
-    const [successMessage, setSuccessMessage] = useState("");
-    const [errorMessage, setErrorMessage] = useState("");
     const [data, setData] = useState<ProfileData>(emptyProfileData);
 
     const [profileImagePreview, setProfileImagePreview] = useState<string>("");
     const [bannerImagePreview, setBannerImagePreview] = useState<string>("");
+
+    // Backend validation errors for the availability step, keyed by "day-slotId".
+    const [slotErrors, setSlotErrors] = useState<Record<string, string[]>>({});
+    // Remembers, in submit order, which (day, slotId) each entry of the
+    // availability payload corresponded to — needed to map the backend's
+    // parallel error array back onto the right slot.
+    const lastAvailabilityMappingRef = useRef<{ day: string; slotId: number }[]>([]);
+
+    const clearSlotError = (day: string, slotId: number) => {
+        const key = `${day}-${slotId}`;
+        setSlotErrors(prev => {
+            if (!(key in prev)) return prev;
+            const next = { ...prev };
+            delete next[key];
+            return next;
+        });
+    };
 
     const { userProfile, isLoading: isUserLoading } = useGetUserProfile();
     const user = userProfile?.data;
@@ -1040,10 +1183,9 @@ const TutorProfile = () => {
     const handleProfileImageChange = (file: File) => {
         const err = validateImageFile(file);
         if (err) {
-            setErrorMessage(`Profile image: ${err}`);
+            toast(`Profile image: ${err}`, { type: "error" });
             return;
         }
-        setErrorMessage("");
         setProfileImageFile(file);
         setProfileImagePreview(URL.createObjectURL(file));
     };
@@ -1051,10 +1193,9 @@ const TutorProfile = () => {
     const handleBannerImageChange = (file: File) => {
         const err = validateImageFile(file);
         if (err) {
-            setErrorMessage(`Banner image: ${err}`);
+            toast(`Banner image: ${err}`, { type: "error" });
             return;
         }
-        setErrorMessage("");
         setBannerImageFile(file);
         setBannerImagePreview(URL.createObjectURL(file));
     };
@@ -1131,6 +1272,14 @@ const TutorProfile = () => {
                 }))
             );
 
+    // Parallel to buildAvailabilityPayload() — remembers which (day, slotId)
+    // produced each entry, so a same-shaped array of backend errors can be
+    // mapped straight back onto the slot that caused it.
+    const buildAvailabilityMapping = () =>
+        data.availability
+            .filter(d => d.enabled)
+            .flatMap(d => d.slots.map(s => ({ day: d.day, slotId: s.id })));
+
     const buildPayload = () => {
         const parsedRate = data.hourlyRate ? Number(data.hourlyRate) : NaN;
         const hourlyRate = Number.isFinite(parsedRate) ? parsedRate : 0;
@@ -1169,36 +1318,74 @@ const TutorProfile = () => {
         return fd;
     }
 
-    const handleSave = () => {
-        setErrorMessage("");
+    // Handles the availability-specific error shape:
+    // [ {}, { non_field_errors: ["end_time must be after start_time."] }, {}, {} ]
+    // — an array parallel to the submitted availability payload, one entry
+    // per slot. Returns true if it found (and applied) availability errors.
+    const applyAvailabilityErrors = (respData: unknown): boolean => {
+        if (!Array.isArray(respData)) return false;
 
+        const mapping = lastAvailabilityMappingRef.current;
+        const newSlotErrors: Record<string, string[]> = {};
+
+        respData.forEach((entry, idx) => {
+            const messages = extractMessages(entry);
+            if (messages.length === 0) return;
+            const target = mapping[idx];
+            if (!target) return;
+            const key = `${target.day}-${target.slotId}`;
+            newSlotErrors[key] = messages;
+        });
+
+        if (Object.keys(newSlotErrors).length === 0) return false;
+
+        setSlotErrors(newSlotErrors);
+        setStep(3);
+
+        const firstMessage = Object.values(newSlotErrors)[0]?.[0];
+        toast(firstMessage || "Please fix the highlighted availability slots.", { type: "error" });
+        return true;
+    };
+
+    const handleSave = () => {
         // Final guard: re-validate any pending image files before submitting
         if (profileImageFile) {
             const err = validateImageFile(profileImageFile);
-            if (err) { setErrorMessage(`Profile image: ${err}`); return; }
+            if (err) { toast(`Profile image: ${err}`, { type: "error" }); return; }
         }
         if (bannerImageFile) {
             const err = validateImageFile(bannerImageFile);
-            if (err) { setErrorMessage(`Banner image: ${err}`); return; }
+            if (err) { toast(`Banner image: ${err}`, { type: "error" }); return; }
         }
 
         const payload = buildPayload();
+
+        // Reset previous errors and remember the slot mapping for this submission
+        setSlotErrors({});
+        lastAvailabilityMappingRef.current = buildAvailabilityMapping();
 
         const hasNewImage = !!profileImageFile || !!bannerImageFile;
         const body: any = hasNewImage ? toFormData(payload, profileImageFile, bannerImageFile) : payload;
 
         updateTutorProfile(body, {
             onSuccess: () => {
-                setSuccessMessage(hasProfile ? "Profile updated successfully!" : "Profile created successfully!");
-                setTimeout(() => setSuccessMessage(""), 3000);
+                toast(hasProfile ? "Profile updated successfully!" : "Profile created successfully!", { type: "success" });
                 setMode("view");
             },
             onError: (e: any) => {
-                setErrorMessage(
-                    e.response?.data?.message ||
-                    e.response?.data?.detail ||
-                    "Failed to save profile."
-                );
+                const respData = e.response?.data;
+
+                // Availability errors come back as an array parallel to what was sent.
+                if (applyAvailabilityErrors(respData)) return;
+
+                // Otherwise fall back to a generic message/detail, or any other
+                // field-level error object the backend might return.
+                const genericMessage =
+                    respData?.message ||
+                    respData?.detail ||
+                    (respData && typeof respData === "object" ? extractMessages(respData)[0] : undefined);
+
+                toast(genericMessage || "Failed to save profile.", { type: "error" });
             },
         });
     };
@@ -1209,7 +1396,7 @@ const TutorProfile = () => {
         for (let s = 1; s <= 3; s++) {
             const err = getStepError(s as Step, data);
             if (err) {
-                setErrorMessage(err);
+                toast(err, { type: "error" });
                 setStep(s as Step);
                 return;
             }
@@ -1221,10 +1408,9 @@ const TutorProfile = () => {
     const goNext = () => {
         const err = getStepError(step, data);
         if (err) {
-            setErrorMessage(err);
+            toast(err, { type: "error" });
             return;
         }
-        setErrorMessage("");
         setStep(s => Math.min(3, s + 1) as Step);
     };
 
@@ -1234,12 +1420,11 @@ const TutorProfile = () => {
         for (let s = 1; s < target; s++) {
             const err = getStepError(s as Step, data);
             if (err) {
-                setErrorMessage(err);
+                toast(err, { type: "error" });
                 setStep(s as Step);
                 return;
             }
         }
-        setErrorMessage("");
         setStep(target);
     };
 
@@ -1260,6 +1445,7 @@ const TutorProfile = () => {
     if (mode === "empty") {
         return (
             <div className="md:pl-56 pb-20 md:pb-8 pt-20 bg-gray-50 min-h-screen">
+                <ToastContainer />
                 <EmptyState onCreate={handleStartCreate} />
             </div>
         );
@@ -1268,6 +1454,7 @@ const TutorProfile = () => {
     return (
         <div className="md:pl-56 pb-20 md:pb-8 lg:pt-20 bg-gray-50 min-h-screen">
             <LoadingOverlay visible={isPending} />
+            <ToastContainer />
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
 
                 {/* Header */}
@@ -1284,21 +1471,6 @@ const TutorProfile = () => {
                         <p className="text-sm text-gray-500">{pct}% complete · {pct < 100 ? "Keep going to boost your visibility" : "Your profile is fully set up"}</p>
                     </div>
                 </div>
-
-                {/* Success / Error banners */}
-                {successMessage && (
-                    <div className="mb-6 bg-green-50 border border-green-200 rounded-2xl p-4 flex items-center gap-3">
-                        <div className="w-5 h-5 bg-green-600 rounded-full flex items-center justify-center shrink-0">
-                            <FiCheck className="text-white" size={12} />
-                        </div>
-                        <p className="text-sm font-semibold text-green-700">{successMessage}</p>
-                    </div>
-                )}
-                {errorMessage && (
-                    <div className="mb-6 bg-red-50 border border-red-200 rounded-2xl p-4">
-                        <p className="text-sm font-semibold text-red-600">{errorMessage}</p>
-                    </div>
-                )}
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
@@ -1341,7 +1513,15 @@ const TutorProfile = () => {
                                 />
                             )}
                             {step === 2 && <Step2 data={data} setData={setData} disabled={isPending} />}
-                            {step === 3 && <Step3Availability data={data} setData={setData} disabled={isPending} />}
+                            {step === 3 && (
+                                <Step3Availability
+                                    data={data}
+                                    setData={setData}
+                                    disabled={isPending}
+                                    slotErrors={slotErrors}
+                                    onClearSlotError={clearSlotError}
+                                />
+                            )}
 
                             {/* Nav footer */}
                             <div className="flex flex-wrap items-center justify-between gap-3 pt-6 mt-8 border-t border-gray-100">

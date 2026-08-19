@@ -260,6 +260,8 @@ const BookedTutorClass = () => {
     ? myBookingsAsUser.data
     : [];
 
+  console.log('This is booking', myBookingsAsUser)
+
   const countForTab = (tab: keyof typeof TAB_STATUS_MAP) =>
     bookings.filter((b) => TAB_STATUS_MAP[tab]?.includes(b.status)).length;
 

@@ -11,9 +11,8 @@ const TutorDashNavbar = () => {
 
     const { userProfile, isLoading } = useGetUserProfile();
     const user = userProfile?.data;
-    console.log('THis is Users Data', user)
+    // console.log('THis is Users Data', user)
 
-    // ── Close dropdown when clicking outside ────────────────────────────────
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
             if (profileMenuRef.current && !profileMenuRef.current.contains(e.target as Node)) {

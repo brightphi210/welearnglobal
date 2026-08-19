@@ -28,11 +28,11 @@ const ConfirmingPayment = ({
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                     {/* Header band */}
                     <div className="bg-neutral-100 px-6 py-8 text-center text-green-900">
-                        <div className="w-14 h-14 mx-auto rounded-full bg-green-950 flex items-center justify-center mb-4">
+                        <div className="w-14 h-14 mx-auto rounded-full bg-white flex items-center justify-center mb-4">
                             {status === "confirming" ? (
-                                <FiLoader size={24} className="animate-spin text-green-50" />
+                                <FiLoader size={24} className="animate-spin text-green-950" />
                             ) : (
-                                <FiCheckCircle size={26} className="text-green-50" />
+                                <FiCheckCircle size={26} className="text-green-950" />
                             )}
                         </div>
                         <h1 className="text-xl font-extrabold mb-1">
@@ -53,7 +53,7 @@ const ConfirmingPayment = ({
                                 return (
                                     <div key={label} className="flex-1">
                                         <div
-                                            className={`h-1.5 rounded-full mb-1.5 transition-all ${stepDone ? "bg-green-700" : "bg-gray-200"
+                                            className={`h-1.5 rounded-full mb-1.5 transition-all ${stepDone ? "bg-green-500" : "bg-gray-200"
                                                 }`}
                                         />
                                         <p className="text-[10px] font-semibold text-gray-500 text-center">
@@ -75,7 +75,7 @@ const ConfirmingPayment = ({
                             </button>
                         ) : (
                             <Link to={'/student/dashboard/bookings'}>
-                                <button className="w-full cursor-pointer px-4 py-3 bg-green-900 text-white rounded-full font-semibold text-xs hover:bg-green-950 transition-all">
+                                <button className="w-full cursor-pointer px-4 py-3.5 bg-green-950 text-white rounded-full font-semibold text-xs hover:bg-green-950 transition-all">
                                     Go to my sessions
                                 </button>
                             </Link>

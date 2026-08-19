@@ -547,7 +547,7 @@ const StudentTutorProfile = () => {
     const { tutorData, isLoading } = useGetSingleTutor(id!);
     const tutor = tutorData?.data || null;
 
-    // console.log("Tutor data:", tutor);
+    console.log("Tutor data:", tutor);
 
     const { mutate: makeBookings, isPending: isMakingBookings } = useMakeBookings();
     const { mutate: startChat, isPending: isStartingChat } = useStartUserChat();

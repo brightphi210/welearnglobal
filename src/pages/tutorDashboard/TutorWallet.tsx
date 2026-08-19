@@ -368,9 +368,11 @@ const TutorWallet = () => {
     const { getTransactionData, isLoading: transactionLoading } = useGetTransactionData();
 
     const walletData = getWalletData?.data;
-    const transactions: RawTransaction[] = Array.isArray(getTransactionData?.data?.results)
-        ? getTransactionData.data.results
+    const transactions: RawTransaction[] = Array.isArray(getTransactionData?.data)
+        ? getTransactionData.data
         : [];
+
+    // console.log('This is Wallet Data', walletData)
 
     const [activeTab, setActiveTab] = useState<"all" | "earning" | "payout">("all");
 

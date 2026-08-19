@@ -1,20 +1,25 @@
+import { useState } from "react";
 import {
     FiArrowLeft,
     FiBookOpen,
     FiCalendar,
+    FiCheckCircle,
     FiClock,
     FiDollarSign,
     FiMail,
     FiMapPin,
     FiMessageCircle,
     FiPhone,
+    FiSend,
     FiStar,
     FiTag,
     FiVideo,
+    FiX,
 } from "react-icons/fi";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import LoadingOverlay from "../../components/LoadingOverlay";
+import { useStartUserChat } from "../../hooks/mutations/allMutation";
 import { useGetBookingById } from "../../hooks/queries/allQueries";
 import {
     formatDisplayDate,
@@ -114,12 +119,146 @@ const PersonCard = ({
     </div>
 );
 
+/* ─── Start Chat Modal (mirrors StudentTutorProfile) ─────────────────── */
+const StartChatModal = ({
+    onClose,
+    onSubmit,
+    isSubmitting,
+    submitError,
+    tutorName,
+}: {
+    onClose: () => void;
+    onSubmit: (message: string) => void;
+    isSubmitting: boolean;
+    submitError: string | null;
+    tutorName: string;
+}) => {
+    const [message, setMessage] = useState("");
+    const [error, setError] = useState("");
+
+    const handleSubmit = () => {
+        if (!message.trim()) {
+            setError("Please write a message before sending");
+            return;
+        }
+        setError("");
+        onSubmit(message.trim());
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={isSubmitting ? undefined : onClose} />
+
+            <div className="relative bg-white rounded-2xl border border-gray-200 shadow-xl max-w-md w-full p-6 sm:p-7">
+                <button
+                    onClick={onClose}
+                    disabled={isSubmitting}
+                    className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                    <FiX size={16} />
+                </button>
+
+                <div className="w-12 h-12 rounded-2xl bg-green-100 flex items-center justify-center mb-4">
+                    <FiMessageCircle size={20} className="text-green-700" />
+                </div>
+
+                <h3 className="text-lg font-extrabold text-gray-900 mb-1.5">
+                    Message {tutorName}
+                </h3>
+                <p className="text-sm text-gray-500 leading-relaxed mb-5">
+                    Send an opening message to start the conversation. You'll be able to keep chatting once it's sent.
+                </p>
+
+                <div className="mb-6">
+                    <textarea
+                        value={message}
+                        onChange={(e) => {
+                            setMessage(e.target.value);
+                            if (error) setError("");
+                        }}
+                        placeholder={`Hi ${tutorName}, I'd like to ask about...`}
+                        rows={4}
+                        autoFocus
+                        className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400 resize-none"
+                    />
+                    {error && <p className="text-xs text-red-500 font-medium mt-2">{error}</p>}
+                    {submitError && <p className="text-xs text-red-500 font-medium mt-2">{submitError}</p>}
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={onClose}
+                        disabled={isSubmitting}
+                        className="flex-1 py-3.5 border border-gray-200 rounded-full text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleSubmit}
+                        disabled={isSubmitting}
+                        className="flex-1 py-3.5 bg-green-700 text-white rounded-full text-sm font-semibold hover:bg-green-800 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                        {isSubmitting ? "Sending..." : (
+                            <>
+                                <FiSend size={14} />
+                                Send Message
+                            </>
+                        )}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const ChatSuccessModal = ({
+    onClose,
+    onViewMessage,
+    tutorName,
+}: {
+    onClose: () => void;
+    onViewMessage: () => void;
+    tutorName: string;
+}) => (
+    <div className="fixed inset-0 z-60 flex items-center justify-center px-4">
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+        <div className="relative bg-white rounded-2xl border border-gray-200 shadow-xl max-w-md w-full p-6 sm:p-7 text-center">
+            <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FiCheckCircle className="text-green-700" size={28} />
+            </div>
+            <h3 className="text-lg font-extrabold text-gray-900 mb-2">Message Sent</h3>
+            <p className="text-sm text-gray-600 mb-6">
+                Your message to {tutorName} has been sent. You'll be notified when they reply.
+            </p>
+            <div className="flex items-center gap-2">
+                <button
+                    onClick={onClose}
+                    className="flex-1 py-3.5 border border-gray-200 rounded-full text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all"
+                >
+                    Close
+                </button>
+                <button
+                    onClick={onViewMessage}
+                    className="flex-1 py-3.5 bg-green-700 text-white rounded-full text-sm font-semibold hover:bg-green-800 transition-all"
+                >
+                    View Message
+                </button>
+            </div>
+        </div>
+    </div>
+);
+
 const StudentSessionDetail = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
 
-
     const { booking, isLoading } = useGetBookingById(id || "");
+    const { mutate: startChat, isPending: isStartingChat } = useStartUserChat();
+
+    const [showMessageModal, setShowMessageModal] = useState(false);
+    const [chatError, setChatError] = useState<string | null>(null);
+    const [showChatSuccessModal, setShowChatSuccessModal] = useState(false);
+    const [startedChatId, setStartedChatId] = useState<number | null>(null);
 
     const session = booking?.data;
     const status = normalizeStatus(session?.status);
@@ -127,6 +266,7 @@ const StudentSessionDetail = () => {
 
     const tutor = session?.tutor_profile;
     const student = session?.student;
+    const tutorFirstName = tutor?.full_name?.split(" ")[0] || "this tutor";
 
     const handleJoinMeeting = () => {
         if (!session?.session_link) {
@@ -141,7 +281,34 @@ const StudentSessionDetail = () => {
             toast("No tutor to message yet.", { type: "info" });
             return;
         }
-        navigate(`/student/dashboard/messages?tutor=${tutor.id}`);
+        setChatError(null);
+        setShowMessageModal(true);
+    };
+
+    // NOTE: /chat/start/ expects the tutor's USER id, not the tutor_profile id used
+    // for bookings. If `tutor.user` (or similar) isn't present on this payload, swap
+    // `tutor.id` below for whatever field your useGetBookingById response exposes
+    // for the underlying user account.
+    const handleStartChat = (message: string) => {
+        setChatError(null);
+
+        startChat(
+            { tutor_id: tutor?.user ?? tutor?.id, message },
+            {
+                onSuccess: (res: any) => {
+                    setShowMessageModal(false);
+                    setStartedChatId(res?.data?.id);
+                    setShowChatSuccessModal(true);
+                },
+                onError: (err: any) => {
+                    setChatError(
+                        err?.response?.data?.message ||
+                        err?.message ||
+                        "Something went wrong while starting this chat. Please try again."
+                    );
+                },
+            }
+        );
     };
 
     return (
@@ -382,6 +549,29 @@ const StudentSessionDetail = () => {
                     </>
                 ) : null}
             </div>
+
+            {showMessageModal && (
+                <StartChatModal
+                    onClose={() => {
+                        if (!isStartingChat) {
+                            setShowMessageModal(false);
+                            setChatError(null);
+                        }
+                    }}
+                    onSubmit={handleStartChat}
+                    isSubmitting={isStartingChat}
+                    submitError={chatError}
+                    tutorName={tutorFirstName}
+                />
+            )}
+
+            {showChatSuccessModal && (
+                <ChatSuccessModal
+                    onClose={() => setShowChatSuccessModal(false)}
+                    onViewMessage={() => navigate("/student/dashboard/messages", { state: { chatId: startedChatId } })}
+                    tutorName={tutorFirstName}
+                />
+            )}
         </div>
     );
 };
