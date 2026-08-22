@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+    FiAlertTriangle,
     FiArrowLeft,
     FiBookOpen,
     FiCalendar,
@@ -16,6 +17,7 @@ import {
     FiVideo,
     FiX,
 } from "react-icons/fi";
+import { RiArrowRightUpFill } from "react-icons/ri";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import LoadingOverlay from "../../components/LoadingOverlay";
@@ -248,11 +250,107 @@ const ChatSuccessModal = ({
     </div>
 );
 
+/* ─── Complete Session Modal ──────────────────────────────────────────── */
+const CompleteSessionModal = ({
+    onClose,
+    onSubmit,
+    isSubmitting,
+    submitError,
+    studentName,
+}: {
+    onClose: () => void;
+    onSubmit: (note: string) => void;
+    isSubmitting: boolean;
+    submitError: string | null;
+    studentName: string;
+}) => {
+    const [note, setNote] = useState("");
+    const [error, setError] = useState("");
+
+    const handleSubmit = () => {
+        if (!note.trim()) {
+            setError("Please add a note before submitting");
+            return;
+        }
+        setError("");
+        onSubmit(note.trim());
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={isSubmitting ? undefined : onClose} />
+
+            <div className="relative bg-white rounded-2xl border border-gray-200 shadow-xl max-w-md w-full p-6 sm:p-7">
+                <button
+                    onClick={onClose}
+                    disabled={isSubmitting}
+                    className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                    <FiX size={16} />
+                </button>
+
+                <div className="w-12 h-12 rounded-2xl bg-green-100 flex items-center justify-center mb-4">
+                    <FiCheckCircle size={20} className="text-green-700" />
+                </div>
+
+                <h3 className="text-lg font-extrabold text-gray-900 mb-1.5">
+                    Mark session as done
+                </h3>
+
+                <div className="mb-4 flex items-start gap-2 rounded-xl bg-amber-50 border border-amber-200 p-3">
+                    <FiAlertTriangle size={15} className="text-amber-600 shrink-0 mt-0.5" />
+                    <p className="text-xs text-amber-800 leading-relaxed">
+                        This sends a completion request to {studentName}. The session will remain
+                        pending until they approve it — it won't be marked completed automatically.
+                    </p>
+                </div>
+
+                <div className="mb-6">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                        Note for {studentName}
+                    </label>
+                    <textarea
+                        value={note}
+                        onChange={(e) => {
+                            setNote(e.target.value);
+                            if (error) setError("");
+                        }}
+                        placeholder="Summarize what was covered in this session..."
+                        rows={4}
+                        autoFocus
+                        className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400 resize-none"
+                    />
+                    {error && <p className="text-xs text-red-500 font-medium mt-2">{error}</p>}
+                    {submitError && <p className="text-xs text-red-500 font-medium mt-2">{submitError}</p>}
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={onClose}
+                        disabled={isSubmitting}
+                        className="flex-1 py-3.5 border border-gray-200 rounded-full text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={handleSubmit}
+                        disabled={isSubmitting}
+                        className="flex-1 py-3.5 bg-green-700 text-white rounded-full text-xs font-semibold hover:bg-green-800 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                    >
+                        {isSubmitting ? "Submitting..." : "Submit for approval"}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const TutorSessionDetails = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
 
     const { booking, isLoading } = useGetBookingById(id || "");
+
     const { mutate: completeBooking, isPending } = useCompleteBooking(id || "");
     const { mutate: startChat, isPending: isStartingChat } = useStartUserChat();
 
@@ -261,21 +359,59 @@ const TutorSessionDetails = () => {
     const [showChatSuccessModal, setShowChatSuccessModal] = useState(false);
     const [startedChatId, setStartedChatId] = useState<number | null>(null);
 
+    const [showCompleteModal, setShowCompleteModal] = useState(false);
+    const [completeError, setCompleteError] = useState<string | null>(null);
+
     const session = booking?.data;
-    const status = normalizeStatus(session?.status);
-    const isFinished = status === "completed" || status === "cancelled";
+    const rawStatus = normalizeStatus(session?.status);
+
+    // The booking's `status` field on the backend doesn't flip to "completed"
+    // the moment the tutor submits a completion request — it only reflects
+    // reality once the student has acknowledged it too. So the "real" status
+    // is derived from tutor_completed + student_acknowledged rather than
+    // status alone.
+    const tutorCompleted = Boolean(session?.tutor_completed);
+    const studentAcknowledged = Boolean(session?.student_acknowledged);
+    const awaitingStudentApproval = tutorCompleted && !studentAcknowledged;
+    const isCompleted = rawStatus === "completed" || (tutorCompleted && studentAcknowledged);
+    const status = isCompleted ? "completed" : rawStatus;
+    const isFinished = isCompleted || status === "cancelled";
     const statusStyle = statusStyles[status] || statusStyles.pending;
+    const statusLabel = isCompleted ? "Completed" : session?.status_display || status;
 
     const tutor = session?.tutor_profile;
     const student = session?.student;
     const studentFirstName = student?.full_name?.split(" ")[0] || student?.first_name || "this student";
 
-    const handleCompleteSession = () => {
-        completeBooking(undefined as any, {
-            onSuccess: () => {
-                toast("Session marked as completed!", { type: "success" });
-            },
-        });
+    const handleOpenCompleteModal = () => {
+        setCompleteError(null);
+        setShowCompleteModal(true);
+    };
+
+    const handleSubmitCompletion = (note: string) => {
+        setCompleteError(null);
+
+        completeBooking(
+            { note } as any,
+            {
+                onSuccess: () => {
+                    setShowCompleteModal(false);
+                    toast("Completion request sent — waiting on student approval.", { type: "success" });
+                    navigate('/tutor/dashboard/bookings')
+                },
+                onError: (err: any) => {
+                    const data = err?.response?.data;
+                    const message =
+                        data?.detail ||
+                        data?.message ||
+                        data?.non_field_errors?.[0] ||
+                        (typeof data === "string" ? data : null) ||
+                        err?.message ||
+                        "Something went wrong while submitting this request. Please try again.";
+                    setCompleteError(message);
+                },
+            }
+        );
     };
 
     const handleJoinMeeting = () => {
@@ -294,10 +430,6 @@ const TutorSessionDetails = () => {
         setChatError(null);
         setShowMessageModal(true);
     };
-
-    // NOTE: /chat/start/ expects the recipient's USER id. If `student.user` (or similar)
-    // isn't present on this payload, swap `student.id` below for whatever field your
-    // useGetBookingById response exposes for the underlying user account.
     const handleStartChat = (message: string) => {
         setChatError(null);
 
@@ -348,6 +480,25 @@ const TutorSessionDetails = () => {
                     </div>
                 ) : session ? (
                     <>
+                        {/* Waiting-on-student flag */}
+                        {awaitingStudentApproval && (
+                            <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                                <div className="flex items-start gap-2.5">
+                                    <FiAlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="text-sm font-bold text-amber-900">
+                                            Waiting for {studentFirstName} to acknowledge your request
+                                        </p>
+                                        <p className="text-xs text-amber-800">
+                                            You marked this session as done on{" "}
+                                            {formatDisplayDate(session.updated_at?.slice(0, 10) || session.scheduled_date)}.
+                                            It'll move to completed once they approve it.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Hero */}
                         <div className="relative overflow-hidden bg-gray-900 rounded-2xl mb-6">
                             {tutor?.banner && (
@@ -362,9 +513,15 @@ const TutorSessionDetails = () => {
                                     <div className="flex items-center gap-2 mb-2">
                                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold capitalize ring-1 ${statusStyle.badge}`}>
                                             <span className={`w-1.5 h-1.5 rounded-full ${statusStyle.dot}`} />
-                                            {session.status_display || status}
+                                            {statusLabel}
                                         </span>
                                         <Pill>{session.session_type_display || formatSessionType(session.session_type)}</Pill>
+                                        {/* {awaitingStudentApproval && (
+                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold capitalize ring-1 bg-amber-50 text-amber-700 ring-amber-600/20">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                                Awaiting student approval
+                                            </span>
+                                        )} */}
                                     </div>
                                     <h1 className="text-2xl sm:text-3xl font-extrabold text-white mb-1">
                                         {session.subject || "Session details"}
@@ -375,30 +532,40 @@ const TutorSessionDetails = () => {
                                     </p>
                                 </div>
                                 <div className="flex flex-col sm:flex-row gap-2 shrink-0">
-                                    <button
-                                        onClick={handleMessageUser}
-                                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3.5 bg-white/10 text-white border border-white/20 rounded-full text-sm font-semibold hover:bg-white/20 transition-all"
-                                    >
-                                        <FiMessageCircle size={16} />
-                                        Message User
-                                    </button>
+
                                     <button
                                         onClick={handleJoinMeeting}
-                                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3.5 bg-white/10 text-white border border-white/20 rounded-full text-sm font-semibold hover:bg-white/20 transition-all"
+                                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3.5 bg-white text-green-950 border-2 border-white/40 rounded-full text-xs font-semibold transition-all"
                                     >
                                         <FiVideo size={16} />
                                         Join Session
                                     </button>
-                                    {!isFinished && (
+
+                                    <div className="flex gap-3">
+
                                         <button
-                                            onClick={handleCompleteSession}
-                                            disabled={isPending}
-                                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 bg-white text-gray-900 rounded-full text-sm font-semibold hover:bg-gray-100 transition-all disabled:opacity-60"
+                                            onClick={handleMessageUser}
+                                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-3.5 bg-white/10 text-white border border-white/20 rounded-full text-xs font-semibold hover:bg-white/20 transition-all"
                                         >
-                                            <FiCheckCircle size={16} />
-                                            {isPending ? "Completing..." : "Mark as Completed"}
+                                            <FiMessageCircle size={16} />
+                                            Message User
                                         </button>
-                                    )}
+                                        {!isFinished && !awaitingStudentApproval && (
+                                            <button
+                                                onClick={handleOpenCompleteModal}
+                                                disabled={isPending}
+                                                className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 bg-white text-gray-900 rounded-full text-xs font-semibold hover:bg-gray-100 transition-all disabled:opacity-60"
+                                            >
+                                                Done with session
+                                                <RiArrowRightUpFill size={16} />
+                                            </button>
+                                        )}
+                                        {awaitingStudentApproval && (
+                                            <span className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 bg-white/10 text-white/70 border border-white/20 rounded-full text-xs font-semibold cursor-default">
+                                                Waiting on approval
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -449,7 +616,7 @@ const TutorSessionDetails = () => {
                                             {session.tutor_response_note && (
                                                 <div>
                                                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
-                                                        Your response
+                                                        {awaitingStudentApproval || isCompleted ? "Your completion note" : "Your response"}
                                                     </p>
                                                     <p className="text-sm text-gray-600 wrap-break-word">
                                                         {session.tutor_response_note}
@@ -589,6 +756,21 @@ const TutorSessionDetails = () => {
                     onClose={() => setShowChatSuccessModal(false)}
                     onViewMessage={() => navigate("/tutor/dashboard/messages", { state: { chatId: startedChatId } })}
                     recipientName={studentFirstName}
+                />
+            )}
+
+            {showCompleteModal && (
+                <CompleteSessionModal
+                    onClose={() => {
+                        if (!isPending) {
+                            setShowCompleteModal(false);
+                            setCompleteError(null);
+                        }
+                    }}
+                    onSubmit={handleSubmitCompletion}
+                    isSubmitting={isPending}
+                    submitError={completeError}
+                    studentName={studentFirstName}
                 />
             )}
         </div>

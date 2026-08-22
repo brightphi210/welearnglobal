@@ -134,7 +134,7 @@ export const useGetSingleChat = (id?: string) => {
 };
 
 
-export const useMakePayment = (id: string) => {
+export const useMakePayment = (id: any) => {
     const { data, isLoading, isError, isFetched, refetch } = useQuery({
         queryKey: ["payment", id],
         queryFn: async () => {
@@ -262,6 +262,24 @@ export const useGetTransactionData = () => {
 
     return {
         getTransactionData: data,
+        isLoading,
+        isError,
+        isFetched,
+        refetch,
+    };
+};
+
+export const useGetWithdrawableSession = () => {
+    const { data, isLoading, isError, isFetched, refetch } = useQuery({
+        queryKey: ["withdrawableAmount"],
+        queryFn: async () => {
+            const token = (await localStorage.getItem("welearnToken")) || "";
+            return get_requests(`wallet/completed-sessions`, token);
+        },
+    });
+
+    return {
+        getWithdrawableSession: data,
         isLoading,
         isError,
         isFetched,

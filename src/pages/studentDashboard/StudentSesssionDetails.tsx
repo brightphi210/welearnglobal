@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+    FiAlertTriangle,
     FiArrowLeft,
     FiBookOpen,
     FiCalendar,
@@ -19,7 +20,7 @@ import {
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import LoadingOverlay from "../../components/LoadingOverlay";
-import { useStartUserChat } from "../../hooks/mutations/allMutation";
+import { useApproveBookingCompletion, useStartUserChat } from "../../hooks/mutations/allMutation";
 import { useGetBookingById } from "../../hooks/queries/allQueries";
 import {
     formatDisplayDate,
@@ -28,6 +29,8 @@ import {
     getInitials,
     normalizeStatus,
 } from "../../utils/bookingHelpers";
+
+const SUPPORT_EMAIL = "support@yourapp.com";
 
 const statusStyles: Record<string, { badge: string; dot: string }> = {
     upcoming: { badge: "bg-green-50 text-green-700 ring-green-600/20", dot: "bg-green-500" },
@@ -248,17 +251,99 @@ const ChatSuccessModal = ({
     </div>
 );
 
+const CompletionApprovalModal = ({
+    onClose,
+    onApprove,
+    onContactSupport,
+    isSubmitting,
+    submitError,
+    tutorName,
+    tutorNote,
+}: {
+    onClose: () => void;
+    onApprove: () => void;
+    onContactSupport: () => void;
+    isSubmitting: boolean;
+    submitError: string | null;
+    tutorName: string;
+    tutorNote?: string;
+}) => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={isSubmitting ? undefined : onClose} />
+
+        <div className="relative bg-white rounded-2xl border border-gray-200 shadow-xl max-w-md w-full p-6 sm:p-7">
+            <button
+                onClick={onClose}
+                disabled={isSubmitting}
+                className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+                <FiX size={16} />
+            </button>
+
+            <div className="w-12 h-12 rounded-2xl bg-green-100 flex items-center justify-center mb-4">
+                <FiCheckCircle size={20} className="text-green-700" />
+            </div>
+
+            <h3 className="text-lg font-extrabold text-gray-900 mb-1.5">
+                {tutorName} marked this session complete
+            </h3>
+            <p className="text-sm text-gray-500 leading-relaxed mb-4">
+                Please confirm the session happened as expected. If that's right, approve it below.
+                If something's off, contact support instead of approving.
+            </p>
+
+            {tutorNote && (
+                <div className="mb-5 rounded-xl bg-gray-50 border border-gray-200 p-3">
+                    <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                        Note from {tutorName}
+                    </p>
+                    <p className="text-sm text-gray-600 wrap-break-word">{tutorNote}</p>
+                </div>
+            )}
+
+            {submitError && <p className="text-xs text-red-500 font-medium mb-3">{submitError}</p>}
+
+            <div className="flex flex-col gap-2">
+                <button
+                    onClick={onApprove}
+                    disabled={isSubmitting}
+                    className="w-full py-3.5 bg-green-700 text-white rounded-full text-xs font-semibold hover:bg-green-800 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                    {isSubmitting ? "Approving..." : (
+                        <>
+                            <FiCheckCircle size={14} />
+                            Approve Completion
+                        </>
+                    )}
+                </button>
+                <button
+                    onClick={onContactSupport}
+                    disabled={isSubmitting}
+                    className="w-full py-3.5 bg-gray-100 border border-gray-200 rounded-full text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                    <FiAlertTriangle size={14} />
+                    This isn't right — Contact Support
+                </button>
+            </div>
+        </div>
+    </div>
+);
+
 const StudentSessionDetail = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
 
     const { booking, isLoading } = useGetBookingById(id || "");
     const { mutate: startChat, isPending: isStartingChat } = useStartUserChat();
+    const { mutate: approveCompletion, isPending: isApproving } = useApproveBookingCompletion(id || "");
 
     const [showMessageModal, setShowMessageModal] = useState(false);
     const [chatError, setChatError] = useState<string | null>(null);
     const [showChatSuccessModal, setShowChatSuccessModal] = useState(false);
     const [startedChatId, setStartedChatId] = useState<number | null>(null);
+
+    const [showCompletionModal, setShowCompletionModal] = useState(false);
+    const [completionError, setCompletionError] = useState<string | null>(null);
 
     const session = booking?.data;
     const status = normalizeStatus(session?.status);
@@ -267,6 +352,15 @@ const StudentSessionDetail = () => {
     const tutor = session?.tutor_profile;
     const student = session?.student;
     const tutorFirstName = tutor?.full_name?.split(" ")[0] || "this tutor";
+
+    // The tutor has requested completion but the student hasn't reviewed it yet.
+    const needsCompletionApproval = Boolean(session?.tutor_completed) && !session?.student_acknowledged;
+
+    useEffect(() => {
+        if (needsCompletionApproval) {
+            setShowCompletionModal(true);
+        }
+    }, [needsCompletionApproval]);
 
     const handleJoinMeeting = () => {
         if (!session?.session_link) {
@@ -285,10 +379,6 @@ const StudentSessionDetail = () => {
         setShowMessageModal(true);
     };
 
-    // NOTE: /chat/start/ expects the tutor's USER id, not the tutor_profile id used
-    // for bookings. If `tutor.user` (or similar) isn't present on this payload, swap
-    // `tutor.id` below for whatever field your useGetBookingById response exposes
-    // for the underlying user account.
     const handleStartChat = (message: string) => {
         setChatError(null);
 
@@ -309,6 +399,42 @@ const StudentSessionDetail = () => {
                 },
             }
         );
+    };
+
+    const handleApproveCompletion = () => {
+        setCompletionError(null);
+
+        approveCompletion(
+            {} as any,
+            {
+                onSuccess: () => {
+                    setShowCompletionModal(false);
+                    toast("Session confirmed as completed. Thanks!", { type: "success" });
+                    navigate('/student/dashboard/bookings')
+                },
+                onError: (err: any) => {
+                    const data = err?.response?.data;
+                    const message =
+                        data?.detail ||
+                        data?.message ||
+                        data?.non_field_errors?.[0] ||
+                        (typeof data === "string" ? data : null) ||
+                        err?.message ||
+                        "Something went wrong while approving this session. Please try again.";
+                    setCompletionError(message);
+                },
+            }
+        );
+    };
+
+    const handleContactSupport = () => {
+        setShowCompletionModal(false);
+        window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(
+            `Dispute session completion — Booking #${id}`
+        )}&body=${encodeURIComponent(
+            `Hi,\n\nI'd like to dispute the completion request for session #${id} (${session?.subject || "N/A"
+            }) with ${tutorFirstName}.\n\nDetails:\n`
+        )}`;
     };
 
     return (
@@ -339,6 +465,28 @@ const StudentSessionDetail = () => {
                     </div>
                 ) : session ? (
                     <>
+                        {needsCompletionApproval && (
+                            <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                                <div className="flex items-start gap-2.5">
+                                    <FiAlertTriangle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="text-sm font-bold text-amber-900">
+                                            {tutorFirstName} marked this session complete
+                                        </p>
+                                        <p className="text-xs text-amber-800">
+                                            Review it and approve, or contact support if that's not right.
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setShowCompletionModal(true)}
+                                    className="shrink-0 w-full sm:w-auto px-5 py-2.5 bg-amber-600 text-white rounded-full text-xs font-semibold hover:bg-amber-700 transition-all"
+                                >
+                                    Review Completion
+                                </button>
+                            </div>
+                        )}
+
                         {/* Hero */}
                         <div className="relative overflow-hidden bg-gray-900 rounded-2xl mb-6">
                             {tutor?.banner && (
@@ -570,6 +718,23 @@ const StudentSessionDetail = () => {
                     onClose={() => setShowChatSuccessModal(false)}
                     onViewMessage={() => navigate("/student/dashboard/messages", { state: { chatId: startedChatId } })}
                     tutorName={tutorFirstName}
+                />
+            )}
+
+            {showCompletionModal && session && (
+                <CompletionApprovalModal
+                    onClose={() => {
+                        if (!isApproving) {
+                            setShowCompletionModal(false);
+                            setCompletionError(null);
+                        }
+                    }}
+                    onApprove={handleApproveCompletion}
+                    onContactSupport={handleContactSupport}
+                    isSubmitting={isApproving}
+                    submitError={completionError}
+                    tutorName={tutorFirstName}
+                    tutorNote={session.tutor_response_note}
                 />
             )}
         </div>

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { FiMenu, FiX } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
+import logo from '../assets/logo1.png';
+
 
 const Navbar = () => {
     const navigate = useNavigate();
@@ -93,17 +95,9 @@ const Navbar = () => {
                             flexShrink: 0,
                         }}
                     >
-                        <span
-                            style={{
-                                fontFamily: "'Inter', sans-serif",
-                                fontWeight: 700,
-                                fontSize: "16px",
-                                color: "#111827",
-                                letterSpacing: "-0.3px",
-                            }}
-                        >
-                            WELEARN
-                        </span>
+                        <div className="w-25">
+                            <img src={logo} alt="" />
+                        </div>
                     </Link>
 
                     {/* Desktop nav links */}

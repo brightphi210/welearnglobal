@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { FiBell, FiLogOut, FiMessageSquare } from "react-icons/fi";
 import { IoNotificationsOutline } from "react-icons/io5";
 import { Link, useNavigate } from "react-router-dom";
+import logo from '../assets/logo1.png';
 import { useGetUserProfile } from "../hooks/queries/allQueries";
 
 const TutorDashNavbar = () => {
@@ -38,9 +39,9 @@ const TutorDashNavbar = () => {
             <div className="px-4 sm:px-6 lg:px-8 py-2">
                 <div className="flex items-center justify-between">
 
-                    <span className="md:hidden text-2xl font-bold tracking-tight text-emerald-700">
-                        Welearn
-                    </span>
+                    <div className="w-20">
+                        <img src={logo} alt="" />
+                    </div>
 
                     <div className="flex items-center gap-3 ml-auto">
                         <Link to={'/tutor/dashboard/messages'}>

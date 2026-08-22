@@ -38,6 +38,23 @@ export const useStartUserChat = () => {
 }
 
 
+export const useApproveBookingCompletion = (id: any) => {
+  const queryClient = useQueryClient()
+
+  const approveBookingCompletion = useMutation({
+    mutationFn: async (data: any) => {
+      const token = (await localStorage.getItem("welearnToken")) || ""
+      return post_requests(`bookings/${id}/complete/`, data, token)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["myBookingsAsUser"] })
+    },
+  })
+
+  return approveBookingCompletion
+}
+
+
 
 
 
@@ -66,7 +83,7 @@ export const useCompleteBooking = (bookingId: string) => {
   const completeBookings = useMutation({
     mutationFn: async (data: any) => {
       const token = (await localStorage.getItem("welearnToken")) || ""
-      return patch_requests(`bookings/${bookingId}/complete/`, data, token)
+      return post_requests(`bookings/${bookingId}/complete/`, data, token)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["myBookingsAsTutor"] })
@@ -77,3 +94,20 @@ export const useCompleteBooking = (bookingId: string) => {
 }
 
 
+export const useMakeWithdrawal = () => {
+  const queryClient = useQueryClient()
+
+  const makeWithdrawal = useMutation({
+    mutationFn: async (data: any) => {
+      const token = (await localStorage.getItem("welearnToken")) || ""
+      return post_requests(`withdrawals/`, data, token)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wallet"] });
+      queryClient.invalidateQueries({ queryKey: ["transaction"] });
+      queryClient.invalidateQueries({ queryKey: ["withdrawableAmount"] });
+    },
+  })
+
+  return makeWithdrawal
+}

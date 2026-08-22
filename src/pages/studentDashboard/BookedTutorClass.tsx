@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import {
   FiArrowRight,
   FiCalendar,
+  FiCheckCircle,
   FiClock,
   FiExternalLink,
   FiMapPin,
@@ -44,6 +45,9 @@ interface RawBooking {
   total_amount: string;
   created_at: string;
   session_link?: string | null;
+  tutor_completed?: boolean;
+  student_acknowledged?: boolean;
+  duration?: number;
 }
 
 // ---- small local formatters (no bookingUtils) ----
@@ -76,12 +80,26 @@ const getInitials = (name: string) =>
 
 const STUDENT_SESSION_ROUTE = (id: string | number) =>
   `/student/dashboard/session/${id}`;
+const isFullyCompleted = (b: RawBooking) =>
+  b.status === "completed" && !!b.tutor_completed && !!b.student_acknowledged;
 
-// Tabs group raw statuses into buckets
-const TAB_STATUS_MAP: Record<"confirmed" | "pending" | "cancelled", string[]> = {
-  confirmed: ["accepted", "payment_confirmed"],
-  pending: ["pending"],
-  cancelled: ["cancelled"],
+const isAwaitingStudentApproval = (b: RawBooking) =>
+  b.status === "payment_confirmed" && !!b.tutor_completed && !b.student_acknowledged;
+
+const getTabKey = (
+  b: RawBooking
+): "confirmed" | "pending" | "completed" | "cancelled" | null => {
+  if (isFullyCompleted(b)) return "completed";
+  if (b.status === "accepted" || b.status === "payment_confirmed") return "confirmed";
+  if (b.status === "pending") return "pending";
+  if (b.status === "declined") return "cancelled";
+  return null;
+};
+
+
+const getDisplayStatus = (b: RawBooking): { key: string; label: string } => {
+  if (isFullyCompleted(b)) return { key: "completed", label: "Completed" };
+  return { key: b.status, label: b.status_display };
 };
 
 const statusBadge: Record<string, string> = {
@@ -89,6 +107,7 @@ const statusBadge: Record<string, string> = {
   payment_confirmed: "bg-green-50 text-green-700",
   pending: "bg-amber-50 text-amber-700",
   cancelled: "bg-red-50 text-red-700",
+  completed: "bg-gray-100 text-gray-700",
 };
 
 const sessionTypeBadge: Record<string, string> = {
@@ -96,23 +115,16 @@ const sessionTypeBadge: Record<string, string> = {
   onsite: "bg-orange-50 text-orange-700",
 };
 
-// BookingCard now lives outside BookedTutorClass. It was previously declared
-// inside the parent's render, so it got recreated as a new component "type"
-// every time BookedTutorClass re-rendered (e.g. on each keystroke in search).
-// That reset each card's internal state (imgError) and remounted its DOM
-// every render — wasteful, and the same class of bug that broke your filter
-// inputs on the tutors page.
 const BookingCard = ({
   booking,
   onOpenSessionDetails,
 }: {
-  booking: any;
+  booking: RawBooking;
   onOpenSessionDetails: (booking: RawBooking) => void;
 }) => {
   const [imgError, setImgError] = useState(false);
 
   const { getPaymentUrl, isLoading: isPaying } = useMakePayment(booking.id);
-
   const handlePayment = async () => {
     try {
       const response = await getPaymentUrl;
@@ -131,6 +143,11 @@ const BookingCard = ({
       });
     }
   };
+
+
+  const displayStatus = getDisplayStatus(booking);
+  const fullyCompleted = isFullyCompleted(booking);
+  const awaitingApproval = isAwaitingStudentApproval(booking);
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-5 overflow-hidden">
@@ -157,10 +174,10 @@ const BookingCard = ({
         </div>
 
         <span
-          className={`shrink-0 px-3 py-1 rounded-full text-[10px] font-semibold ${statusBadge[booking.status] ?? "bg-gray-100 text-gray-700"
+          className={`shrink-0 px-3 py-1 rounded-full text-[10px] font-semibold ${statusBadge[displayStatus.key] ?? "bg-gray-100 text-gray-700"
             }`}
         >
-          {booking.status_display}
+          {displayStatus.label}
         </span>
       </div>
 
@@ -191,7 +208,7 @@ const BookingCard = ({
               className={`px-2 py-1 rounded-full text-[11px] font-semibold ${sessionTypeBadge[booking.session_type] ?? "bg-gray-100 text-gray-700"
                 }`}
             >
-              Duration: {(booking as any).duration}days
+              Duration: {booking.duration}days
             </span>
           </div>
 
@@ -200,6 +217,16 @@ const BookingCard = ({
           </span>
         </div>
       </div>
+
+      {awaitingApproval && (
+        <div className="mt-3 flex items-start gap-2 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
+          <FiCheckCircle size={14} className="mt-0.5 shrink-0" />
+          <p>
+            Your tutor marked this session as complete. Please confirm below so it can
+            be closed out.
+          </p>
+        </div>
+      )}
 
       {booking.notes && (
         <div className="mt-3 rounded-xl bg-gray-50 p-3 text-xs text-gray-600 wrap-break-word">
@@ -213,6 +240,7 @@ const BookingCard = ({
           <button
             onClick={handlePayment}
             disabled={isPaying}
+
             className="w-full flex items-center justify-center gap-1.5 px-4 cursor-pointer py-3 bg-green-900 text-white rounded-full text-xs font-semibold hover:bg-green-800 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isPaying ? "Processing..." : "Proceed to Payment"}
@@ -220,15 +248,36 @@ const BookingCard = ({
         )}
 
         {booking.status === "payment_confirmed" && (
-          <div className="flex flex-col sm:flex-row gap-2">
-            <button
-              onClick={() => onOpenSessionDetails(booking)}
-              className="flex-1 flex items-center justify-center gap-1.5 px-4 py-3 bg-green-900 text-white rounded-full text-xs font-semibold hover:bg-green-800 transition-all"
-            >
-              <FiVideo size={14} />
-              View Session
-            </button>
-          </div>
+          <>
+            {fullyCompleted ? (
+              <button
+                onClick={() => onOpenSessionDetails(booking)}
+                className="w-full flex items-center justify-center gap-1.5 px-4 py-3 bg-gray-700 text-white rounded-full text-xs font-semibold hover:bg-gray-800 transition-all"
+              >
+                <FiVideo size={14} />
+                View Summary
+              </button>
+            ) : awaitingApproval ? (
+              <button
+                onClick={() => onOpenSessionDetails(booking)}
+                className="w-full flex items-center justify-center gap-1.5 px-4 py-3 bg-yellow-600 text-white rounded-full text-xs font-semibold cursor-pointer transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <FiCheckCircle size={14} />
+                Approve Completed Request
+              </button>
+            ) : (
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  onClick={() => onOpenSessionDetails(booking)}
+                  className="w-full text-center flex justify-center gap-2 items-center px-4 py-3.5 border-2 border-green-700 text-green-700 rounded-full text-xs font-semibold hover:bg-green-50 transition-all"
+                // className="flex-1 flex items-center justify-center gap-1.5 px-4 py-3 bg-green-700 text-white cursor-pointer rounded-full text-xs font-semibold hover:bg-green-800 transition-all"
+                >
+                  <FiVideo size={14} />
+                  View Session
+                </button>
+              </div>
+            )}
+          </>
         )}
 
         {booking.status === "pending" && (
@@ -248,9 +297,9 @@ const BookingCard = ({
 };
 
 const BookedTutorClass = () => {
-  const [activeTab, setActiveTab] = useState<"confirmed" | "pending" | "cancelled">(
-    "confirmed"
-  );
+  const [activeTab, setActiveTab] = useState<
+    "confirmed" | "pending" | "completed" | "cancelled"
+  >("confirmed");
   const [searchTerm, setSearchTerm] = useState("");
   const [sessionDetailsOpen, setSessionDetailsOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<RawBooking | null>(null);
@@ -262,8 +311,8 @@ const BookedTutorClass = () => {
 
   console.log('This is booking', myBookingsAsUser)
 
-  const countForTab = (tab: keyof typeof TAB_STATUS_MAP) =>
-    bookings.filter((b) => TAB_STATUS_MAP[tab]?.includes(b.status)).length;
+  const countForTab = (tab: "confirmed" | "pending" | "completed" | "cancelled") =>
+    bookings.filter((b) => getTabKey(b) === tab).length;
 
   // Search matches tutor name or subject, case-insensitive, on top of the
   // active status tab.
@@ -271,7 +320,7 @@ const BookedTutorClass = () => {
     const query = searchTerm.trim().toLowerCase();
 
     return bookings.filter((b) => {
-      const matchesTab = TAB_STATUS_MAP[activeTab].includes(b.status);
+      const matchesTab = getTabKey(b) === activeTab;
       if (!matchesTab) return false;
 
       if (!query) return true;
@@ -285,21 +334,13 @@ const BookedTutorClass = () => {
   const tabs = [
     { id: "confirmed", label: "Confirmed", count: countForTab("confirmed") },
     { id: "pending", label: "Pending", count: countForTab("pending") },
+    { id: "completed", label: "Completed", count: countForTab("completed") },
     { id: "cancelled", label: "Cancelled", count: countForTab("cancelled") },
   ] as const;
 
   const openSessionDetails = (booking: RawBooking) => {
     setSelectedSession(booking);
     setSessionDetailsOpen(true);
-  };
-
-  const handleJoinSession = () => {
-    const link = selectedSession?.session_link;
-    if (!link) {
-      toast("No session link is available yet.", { type: "info" });
-      return;
-    }
-    window.open(link, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -389,7 +430,9 @@ const BookedTutorClass = () => {
                 ? "Try a different tutor name or subject."
                 : activeTab === "confirmed"
                   ? "Book a session with a tutor to see it here."
-                  : "Bookings in this category will show up here once available."}
+                  : activeTab === "completed"
+                    ? "Sessions you've completed and approved will show up here."
+                    : "Bookings in this category will show up here once available."}
             </p>
             {activeTab === "confirmed" && !searchTerm && (
               <button className="px-6 py-2.5 bg-green-700 text-white rounded-full font-semibold text-sm hover:bg-green-800 transition-all">
@@ -431,7 +474,9 @@ const BookedTutorClass = () => {
                 <div>
                   <h3 className="text-base font-extrabold">Session details</h3>
                   <p className="text-sm text-green-50">
-                    Ready to begin your tutoring session
+                    {isFullyCompleted(selectedSession)
+                      ? "This session has been completed"
+                      : "Ready to begin your tutoring session"}
                   </p>
                 </div>
               </div>
@@ -526,26 +571,9 @@ const BookedTutorClass = () => {
                       <FiExternalLink size={13} />
                       View Session Page
                     </Link>
-                    <button
-                      onClick={handleJoinSession}
-                      className="inline-flex lg:w-fit w-full text-center justify-center items-center gap-2 rounded-full bg-green-700 px-4 py-3 text-xs font-semibold text-white hover:bg-green-800 transition-all"
-                    >
-                      <FiVideo size={13} />
-                      Join Session
-                    </button>
                   </div>
                 </div>
               </div>
-
-              {selectedSession.session_link && (
-                <button
-                  onClick={handleJoinSession}
-                  className="flex w-full items-center justify-center gap-2 rounded-full border border-green-200 bg-green-50 px-4 py-3 text-sm font-semibold text-green-700 hover:bg-green-100 transition-all"
-                >
-                  <FiExternalLink size={14} />
-                  Open session link
-                </button>
-              )}
             </div>
           </div>
         </div>

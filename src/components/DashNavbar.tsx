@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { FiBell, FiLogOut, FiMessageSquare } from "react-icons/fi";
 import { IoNotificationsOutline } from "react-icons/io5";
 import { Link, useNavigate } from "react-router-dom";
+import logo from '../assets/logo1.png';
 import { useGetUserProfile } from "../hooks/queries/allQueries";
 
 const DashNavbar = () => {
@@ -40,9 +41,9 @@ const DashNavbar = () => {
                 <div className="flex items-center justify-between">
 
                     {/* Mobile Logo — hidden on md+ (sidebar takes over) */}
-                    <span className="md:hidden text-2xl font-bold tracking-tight text-emerald-700">
-                        Welearn
-                    </span>
+                    <div className="w-20">
+                        <img src={logo} alt="" />
+                    </div>
 
                     {/* Right Icons */}
                     <div className="flex items-center gap-3 ml-auto">

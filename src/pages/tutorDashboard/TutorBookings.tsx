@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-    FiArrowRight,
     FiCalendar,
     FiClock,
     FiExternalLink,
@@ -9,7 +8,7 @@ import {
     FiSearch,
     FiUser,
     FiVideo,
-    FiX,
+    FiX
 } from "react-icons/fi";
 import { Link } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
@@ -37,19 +36,20 @@ const TutorBookings = () => {
 
     const { myBookingsAsTutor, isLoading } = useGetMyBookingsAsTutor();
     const myBookings = Array.isArray(myBookingsAsTutor?.data) ? myBookingsAsTutor.data : [];
+    console.log('This is my booking', myBookings)
     const { mutate: respondToBooking, isPending } = useAcceptOrDeclineBooking(selectedBookingId || "");
 
     const bookings = myBookings.map((booking: any) => {
-        // The backend sometimes overloads `status` with payment states
-        // (e.g. "payment_confirmed") instead of always sending a plain
-        // booking-lifecycle value. Treat that case explicitly as "upcoming"
-        // so it lands in the right tab instead of being dropped by
-        // normalizeStatus's default mapping.
-        const derivedStatus =
-            booking.status === "payment_confirmed" ? "upcoming" : normalizeStatus(booking.status);
+        const tutorCompleted = !!booking.tutor_completed;
+        const studentAcknowledged = !!booking.student_acknowledged;
 
-        // Same idea for paymentStatus: fall back to the booking status
-        // itself when there's no separate payment_status field.
+        const derivedStatus =
+            booking.status === "payment_confirmed"
+                ? tutorCompleted && studentAcknowledged
+                    ? "completed"
+                    : "upcoming"
+                : normalizeStatus(booking.status);
+
         const derivedPaymentStatus =
             booking.payment_status ||
             booking.paymentStatus ||
@@ -59,6 +59,8 @@ const TutorBookings = () => {
             id: booking.id,
             status: derivedStatus,
             paymentStatus: derivedPaymentStatus,
+            tutorCompleted,
+            studentAcknowledged,
             student: booking.student?.full_name || booking.student?.first_name,
             studentNameForAvatar: booking.student?.full_name || booking.student?.first_name || "Student",
             studentEmail: booking.student?.email,
@@ -157,15 +159,6 @@ const TutorBookings = () => {
         );
     };
 
-    const handleBeginSession = () => {
-        if (!selectedSession?.sessionLink) {
-            toast("No session link is available yet.", { type: "info" });
-            return;
-        }
-
-        window.open(selectedSession.sessionLink, "_blank", "noopener,noreferrer");
-    };
-
     const BookingCard = ({ booking }: { booking: any }) => (
         <div className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-5 overflow-hidden">
             <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -226,6 +219,13 @@ const TutorBookings = () => {
                 </div>
             </div>
 
+            {booking.status === "upcoming" && booking.tutorCompleted && !booking.studentAcknowledged && (
+                <div className="mt-3 rounded-xl bg-amber-50 p-3 text-xs text-amber-800">
+                    You marked this session as complete. It'll move to Completed once the
+                    student confirms.
+                </div>
+            )}
+
             {booking.notes && (
                 <div className="mt-3 rounded-xl bg-gray-50 p-3 text-xs text-gray-600 wrap-break-word">
                     <p className="font-semibold text-gray-700 mb-1">Notes</p>
@@ -253,33 +253,35 @@ const TutorBookings = () => {
 
                 {booking.status === "upcoming" && (
                     <div className="flex flex-col sm:flex-row gap-2">
-                        <button
-                            onClick={() => openSessionDetails(booking)}
-                            disabled={booking.paymentStatus !== "payment_confirmed"}
-                            className="flex-1 px-4 py-3.5 bg-green-900 text-white rounded-full text-xs font-semibold hover:bg-green-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {booking.paymentStatus === "payment_confirmed" ? "View Session" : "Awaiting Payment"}
-                        </button>
+                        {booking.tutorCompleted && !booking.studentAcknowledged ? (
+                            <button
+                                disabled
+                                className="flex-1 px-4 py-3.5 bg-amber-50 text-amber-700 rounded-full text-xs font-semibold cursor-default"
+                            >
+                                Waiting for Student Acknowledgement
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => openSessionDetails(booking)}
+                                disabled={booking.paymentStatus !== "payment_confirmed"}
+                                className="w-full text-center px-4 py-3.5 border-2 border-green-700 text-green-700 rounded-full text-xs font-semibold hover:bg-green-50 transition-all"
+
+                            // className="flex-1 px-4 py-3.5 bg-green-700 text-white rounded-full text-xs font-semibold hover:bg-green-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {booking.paymentStatus === "payment_confirmed" ? "View Session" : "Awaiting Payment"}
+                            </button>
+                        )}
                     </div>
                 )}
 
-                {booking.status === "completed" && (
-                    <Link
-                        to={TUTOR_SESSION_ROUTE(booking.id)}
-                        className="w-full text-center px-4 py-3.5 border-2 border-green-700 text-green-700 rounded-full text-xs font-semibold hover:bg-green-50 transition-all"
-                    >
-                        View Summary
-                    </Link>
-                )}
-
-                {booking.status === "cancelled" && (
+                {/* {booking.status === "cancelled" && (
                     <Link
                         to={TUTOR_SESSION_ROUTE(booking.id)}
                         className="w-full text-center px-4 py-3.5 border border-gray-300 text-gray-500 rounded-full text-xs font-semibold hover:bg-gray-50 transition-all"
                     >
                         View Details
                     </Link>
-                )}
+                )} */}
             </div>
         </div>
     );
@@ -346,15 +348,6 @@ const TutorBookings = () => {
                         <p className="text-sm text-gray-500">
                             Bookings in this category will show up here once available.
                         </p>
-                    </div>
-                )}
-
-                {filteredBookings.length > 0 && (
-                    <div className="flex items-center justify-center mt-8">
-                        <button className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-700">
-                            Load more
-                            <FiArrowRight size={14} />
-                        </button>
                     </div>
                 )}
             </div>
@@ -465,28 +458,9 @@ const TutorBookings = () => {
                                             <FiExternalLink size={14} />
                                             View Session Page
                                         </Link>
-                                        <button
-                                            onClick={handleBeginSession}
-                                            disabled={selectedSession.paymentStatus !== "payment_confirmed"}
-                                            className="inline-flex lg:w-fit w-full text-center justify-center items-center gap-2 rounded-full bg-green-700 px-4 py-3.5 text-xs font-semibold text-white hover:bg-green-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            <FiVideo size={14} />
-                                            Begin Session
-                                        </button>
                                     </div>
                                 </div>
                             </div>
-
-                            {selectedSession.sessionLink && (
-                                <button
-                                    onClick={handleBeginSession}
-                                    disabled={selectedSession.paymentStatus !== "payment_confirmed"}
-                                    className="flex w-full items-center justify-center gap-2 rounded-full border border-green-200 bg-green-50 px-4 py-3 text-xs font-semibold text-green-700 hover:bg-green-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <FiExternalLink size={14} />
-                                    Open session link
-                                </button>
-                            )}
                         </div>
                     </div>
                 </div>
