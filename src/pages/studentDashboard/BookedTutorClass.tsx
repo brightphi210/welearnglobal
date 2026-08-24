@@ -435,9 +435,11 @@ const BookedTutorClass = () => {
                     : "Bookings in this category will show up here once available."}
             </p>
             {activeTab === "confirmed" && !searchTerm && (
-              <button className="px-6 py-2.5 bg-green-700 text-white rounded-full font-semibold text-sm hover:bg-green-800 transition-all">
-                Find a Tutor
-              </button>
+              <Link to={'/student/dashboard/tutors'}>
+                <button className="px-6 py-2.5 bg-green-700 text-white rounded-full font-semibold text-sm hover:bg-green-800 transition-all">
+                  Find a Tutor
+                </button>
+              </Link>
             )}
           </div>
         )}
