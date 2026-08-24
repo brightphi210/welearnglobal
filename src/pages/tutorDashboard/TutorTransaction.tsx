@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
     FiArrowDownLeft,
     FiArrowLeft,
@@ -21,14 +21,24 @@ interface RawTransaction {
     booking: number | null;
     booking_subject: string | null;
     created_at: string;
+    status_label?: string;
+    signed_amount?: string | number;
+    title?: string;
+    type?: "credit" | "debit";
 }
 
 const TutorTransactions = () => {
     const { getTransactionData, isLoading } = useGetTransactionData();
 
-    const transactions: RawTransaction[] = Array.isArray(getTransactionData?.data?.results)
-        ? getTransactionData.data.results
-        : [];
+    // Same endpoint can come back either as a bare array (like on the Wallet
+    // page) or as a paginated { results: [...] } payload — support both so
+    // this list never silently renders empty because of a shape mismatch.
+    const transactions: RawTransaction[] = useMemo(() => {
+        const data = getTransactionData?.data;
+        if (Array.isArray(data)) return data;
+        if (Array.isArray(data?.results)) return data.results;
+        return [];
+    }, [getTransactionData]);
 
     const [activeTab, setActiveTab] = useState<"all" | "earning" | "payout">("all");
 
@@ -73,48 +83,57 @@ const TutorTransactions = () => {
                     </div>
                 </div>
 
-                <div className="bg-white rounded-2xl border border-gray-200 p-6">
+                <div className="bg-white rounded-2xl border border-gray-200 p-2 sm:p-4">
                     {isLoading ? (
                         <div className="py-12 text-center text-sm text-gray-500">Loading transactions...</div>
                     ) : filteredTransactions.length > 0 ? (
-                        <div className="divide-y divide-gray-100">
-                            {filteredTransactions.map((tx) => (
-                                <div key={tx.id} className="flex items-center justify-between gap-4 py-4">
-                                    <div className="flex items-center gap-3 min-w-0">
-                                        <div
-                                            className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${tx.transaction_type === "earning" ? "bg-green-50" : "bg-orange-50"
-                                                }`}
-                                        >
-                                            {tx.transaction_type === "earning" ? (
-                                                <FiArrowDownLeft size={16} className="text-green-700" />
-                                            ) : (
-                                                <FiArrowUpRight size={16} className="text-orange-700" />
-                                            )}
+                        <div className="divide-y divide-gray-100 space-y-3 p-2">
+                            {filteredTransactions.map((tx) => {
+                                const isCredit =
+                                    tx.transaction_type === "earning" || tx.type === "credit";
+
+                                return (
+                                    <div
+                                        key={tx.id}
+                                        className="flex bg-gray-100 lg:p-6 p-4 rounded-lg lg:flex-row flex-col lg:items-center lg:justify-between gap-4 py-4"
+                                    >
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div
+                                                className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isCredit ? "bg-green-50" : "bg-orange-50"
+                                                    }`}
+                                            >
+                                                {isCredit ? (
+                                                    <FiArrowDownLeft size={16} className="text-green-700" />
+                                                ) : (
+                                                    <FiArrowUpRight size={16} className="text-orange-700" />
+                                                )}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="font-semibold text-gray-900 text-sm truncate">
+                                                    {tx.title ||
+                                                        tx.description ||
+                                                        (tx.transaction_type === "earning" ? "Earning" : "Payout")}
+                                                </p>
+                                                <p className="text-xs text-gray-500 mt-0.5 truncate">
+                                                    {tx.booking_subject ? `${tx.booking_subject} • ` : ""}
+                                                    {formatTransactionDate(tx.created_at)}
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div className="min-w-0">
-                                            <p className="font-semibold text-gray-900 text-sm truncate">
-                                                {tx.booking_subject || tx.description}
+                                        <div className="lg:text-right flex lg:gap-0 gap-3 lg:items-end items-center flex-row lg:flex-col shrink-0">
+                                            <p className="font-bold text-sm text-gray-900">
+                                                ₦{formatAmount(tx.signed_amount ?? tx.amount)}
                                             </p>
-                                            <p className="text-xs text-gray-500 mt-0.5 truncate">
-                                                {tx.booking_subject ? tx.description : ""}
-                                                {tx.booking_subject ? " • " : ""}
-                                                {formatTransactionDate(tx.created_at)}
-                                            </p>
+                                            <span
+                                                className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[11px] font-semibold capitalize ${statusStyles[tx.status] ?? "bg-gray-200 text-gray-900"
+                                                    }`}
+                                            >
+                                                {tx.status_label || tx.status}
+                                            </span>
                                         </div>
                                     </div>
-                                    <div className="text-right shrink-0">
-                                        <p className="font-bold text-sm text-gray-900">
-                                            {tx.transaction_type === "earning" ? "+" : "-"}₦{formatAmount(tx.amount)}
-                                        </p>
-                                        <span
-                                            className={`inline-block mt-1 px-2 py-0.5 rounded text-[11px] font-semibold capitalize ${statusStyles[tx.status] ?? "bg-gray-100 text-gray-700"
-                                                }`}
-                                        >
-                                            {tx.status}
-                                        </span>
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     ) : (
                         <div className="py-16 text-center">

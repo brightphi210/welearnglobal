@@ -111,7 +111,6 @@ async function verifyBankAccount(ibanOrAccount: string): Promise<VerifyResult> {
         };
     }
 
-    // 1. Try IBANforge first (best data) if a free key is available
     if (IBANFORGE_API_KEY) {
         try {
             const res = await fetch("https://api.ibanforge.com/v1/iban/validate", {
@@ -773,6 +772,7 @@ const TutorWallet = () => {
     )
         ? getTransactionData.data
         : [];
+    console.log('Wallet data', transactions)
 
     const rawWithdrawable = getWithdrawableSession?.data?.results ?? [];
     console.log('Withdrawable Sessions', rawWithdrawable)
@@ -790,9 +790,6 @@ const TutorWallet = () => {
         }))
         : [];
 
-    // Sessions withdrawn in THIS browsing session get hidden immediately so
-    // the list feels live, even before the server's withdrawable-sessions
-    // list has a chance to refetch.
     const [withdrawnSessionIds, setWithdrawnSessionIds] = useState<Set<number>>(
         new Set()
     );

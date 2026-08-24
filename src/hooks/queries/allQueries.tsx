@@ -286,8 +286,3 @@ export const useGetWithdrawableSession = () => {
         refetch,
     };
 };
-
-
-
-
-
