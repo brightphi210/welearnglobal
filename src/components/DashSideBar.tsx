@@ -1,12 +1,15 @@
+import { useState } from "react";
 import {
     FiCalendar, FiCompass,
     FiHome, FiLogOut, FiMessageSquare,
     FiUser
 } from "react-icons/fi";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import ConfirmLogoutModal from "./LogoutModal";
 
 const DashSideBar = () => {
     const location = useLocation();
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
     const navItems = [
         { id: "home", label: "Home", icon: FiHome, link: "/student/dashboard/overview" },
@@ -60,7 +63,10 @@ const DashSideBar = () => {
 
                 {/* Logout */}
                 <div className="px-3 py-5 border-t border-white/10">
-                    <button onClick={handleLogout} className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-neutral-400 hover:bg-red-500/10 hover:text-red-400 transition-all font-medium text-xs">
+                    <button
+                        onClick={() => setShowLogoutConfirm(true)}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-neutral-400 hover:bg-red-500/10 hover:text-red-400 transition-all font-medium text-xs"
+                    >
                         <FiLogOut size={18} />
                         <span>Sign Out</span>
                     </button>
@@ -85,30 +91,27 @@ const DashSideBar = () => {
                         </Link>
                     ))}
 
-                    {/* More Menu */}
-                    <div className="relative group">
-                        {/* Dropdown */}
-                        <div className="absolute bottom-20 right-0 bg-white rounded-xl border border-neutral-100 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all w-48">
-                            {navItems.slice(5).map(({ label, icon: Icon, link }) => (
-                                <Link
-                                    key={link}
-                                    to={link}
-                                    className={`w-full flex items-center gap-3 px-4 py-3 text-xs font-medium transition-all ${isActive(link)
-                                        ? "bg-green-100 text-green-700"
-                                        : "text-neutral-600 hover:bg-green-50 hover:text-green-600"
-                                        }`}
-                                >
-                                    <Icon size={16} />
-                                    <span>{label}</span>
-                                </Link>
-                            ))}
-                        </div>
-                    </div>
+                    {/* Logout */}
+                    <button
+                        onClick={() => setShowLogoutConfirm(true)}
+                        className="flex flex-col items-center justify-center w-14 h-12 rounded-lg transition-all text-red-300 hover:text-red-400"
+                        title="Sign Out"
+                    >
+                        <FiLogOut size={24} />
+                        <span className="text-[8px] mt-0.5 font-medium">Sign Out</span>
+                    </button>
                 </div>
             </nav>
 
             {/* Mobile spacer */}
             <div className="md:hidden h-20" />
+
+            {showLogoutConfirm && (
+                <ConfirmLogoutModal
+                    onCancel={() => setShowLogoutConfirm(false)}
+                    onConfirm={handleLogout}
+                />
+            )}
         </>
     );
 };

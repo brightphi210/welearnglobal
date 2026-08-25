@@ -130,6 +130,14 @@ const validateImageFile = (file: File): string | null => {
     return null;
 };
 
+// Only revoke if it's actually a blob: URL we created ourselves — never
+// revoke a real server URL (that would break a still-in-use <img src>).
+const revokeIfBlobUrl = (url: string) => {
+    if (url && url.startsWith("blob:")) {
+        URL.revokeObjectURL(url);
+    }
+};
+
 /* ─── Time helpers ───────────────────────────────────────────────────── */
 // All times are stored internally as 24hr "HH:MM" strings. The picker itself
 // is always rendered in 12hr format with an explicit AM/PM toggle, so the
@@ -1146,6 +1154,11 @@ const TutorProfile = () => {
     // parallel error array back onto the right slot.
     const lastAvailabilityMappingRef = useRef<{ day: string; slotId: number }[]>([]);
 
+    // Tracks whether we've completed at least one successful load, so a
+    // background refetch (e.g. after a failed save) doesn't blank the whole
+    // form back to a bare loading screen.
+    const hasLoadedOnceRef = useRef(false);
+
     const clearSlotError = (day: string, slotId: number) => {
         const key = `${day}-${slotId}`;
         setSlotErrors(prev => {
@@ -1171,6 +1184,10 @@ const TutorProfile = () => {
     const isLoading = isUserLoading || isTutorLoading;
 
     useEffect(() => {
+        if (!isLoading) hasLoadedOnceRef.current = true;
+    }, [isLoading]);
+
+    useEffect(() => {
         if (!isTutorLoading && !modeInitialized.current) {
             modeInitialized.current = true;
             setMode(hasProfile ? "view" : "empty");
@@ -1187,7 +1204,10 @@ const TutorProfile = () => {
             return;
         }
         setProfileImageFile(file);
-        setProfileImagePreview(URL.createObjectURL(file));
+        setProfileImagePreview(prev => {
+            revokeIfBlobUrl(prev);
+            return URL.createObjectURL(file);
+        });
     };
 
     const handleBannerImageChange = (file: File) => {
@@ -1197,13 +1217,29 @@ const TutorProfile = () => {
             return;
         }
         setBannerImageFile(file);
-        setBannerImagePreview(URL.createObjectURL(file));
+        setBannerImagePreview(prev => {
+            revokeIfBlobUrl(prev);
+            return URL.createObjectURL(file);
+        });
     };
 
     const handleBannerImageClear = () => {
         setBannerImageFile(null);
-        setBannerImagePreview("");
+        setBannerImagePreview(prev => {
+            revokeIfBlobUrl(prev);
+            return "";
+        });
     };
+
+    // Revoke any outstanding blob preview when the component unmounts, so we
+    // don't leak memory across page navigations.
+    useEffect(() => {
+        return () => {
+            revokeIfBlobUrl(profileImagePreview);
+            revokeIfBlobUrl(bannerImagePreview);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Sync name/email from the base user profile
     useEffect(() => {
@@ -1214,11 +1250,22 @@ const TutorProfile = () => {
                 lastName: user.last_name || "",
                 email: user.email || "",
             }));
-            if (user.profile_image) setProfileImagePreview(user.profile_image);
+            if (user.profile_image) {
+                setProfileImagePreview(prev => prev || user.profile_image);
+            }
         }
     }, [user]);
 
-    // Sync tutor-specific fields whenever the fetched tutor profile changes
+    // Sync tutor-specific fields whenever the fetched tutor profile changes.
+    //
+    // IMPORTANT: profile_image / banner are only taken from the server when
+    // we don't already have a preview set (prev || ...). This matters
+    // because this effect can re-run after a background refetch — e.g. one
+    // triggered following a *failed* save — at which point `tutor` still
+    // holds the OLD saved values. Without the `prev ||` guard here, a fresh
+    // locally-picked image preview would get silently overwritten by that
+    // stale server URL and appear "broken" until the user re-selected the
+    // file. Keep both fields guarded the same way so neither can regress.
     useEffect(() => {
         if (!tutor) return;
 
@@ -1248,9 +1295,14 @@ const TutorProfile = () => {
             verificationStatus: tutor.verification_status ?? prev.verificationStatus,
         }));
 
-        // banner/profile_image now come back as real uploaded file URLs
-        if (tutor.banner) setBannerImagePreview(tutor.banner);
-        if (tutor.profile_image) setProfileImagePreview(prev => prev || tutor.profile_image);
+        // banner/profile_image now come back as real uploaded file URLs —
+        // never clobber a locally-selected preview that hasn't been saved yet.
+        if (tutor.banner) {
+            setBannerImagePreview(prev => prev || tutor.banner);
+        }
+        if (tutor.profile_image) {
+            setProfileImagePreview(prev => prev || tutor.profile_image);
+        }
     }, [tutor]);
 
     const isStep1Done = !validateStep1(data);
@@ -1433,7 +1485,7 @@ const TutorProfile = () => {
         setMode("edit");
     };
 
-    if (isLoading) {
+    if (isLoading && !hasLoadedOnceRef.current) {
         return (
             <div className="md:pl-56 pb-20 md:pb-8 flex items-center justify-center min-h-screen">
                 <LoadingOverlay visible={isLoading} />
