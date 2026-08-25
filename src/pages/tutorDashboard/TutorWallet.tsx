@@ -96,7 +96,7 @@ export const statusStyles: Record<string, string> = {
 };
 
 const WITHDRAWABLE_STATUSES = ["completed", "cleared"];
-const IBANFORGE_API_KEY = import.meta.env.VITE_IBANFORGE_KEY || "";
+// const IBANFORGE_API_KEY = import.meta.env.VITE_IBANFORGE_KEY || "";
 
 async function verifyBankAccount(ibanOrAccount: string): Promise<VerifyResult> {
     const cleaned = ibanOrAccount.replace(/\s+/g, "").toUpperCase();
@@ -111,13 +111,13 @@ async function verifyBankAccount(ibanOrAccount: string): Promise<VerifyResult> {
         };
     }
 
-    if (IBANFORGE_API_KEY) {
+    if (true) {
         try {
-            const res = await fetch("https://api.ibanforge.com/v1/iban/validate", {
+            const res = await fetch('/api/verify-iban', {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${IBANFORGE_API_KEY}`,
+                    // Authorization: `Bearer ${IBANFORGE_API_KEY}`,
                 },
                 body: JSON.stringify({ iban: cleaned }),
             });
