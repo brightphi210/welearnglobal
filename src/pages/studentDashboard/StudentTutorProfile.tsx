@@ -684,7 +684,7 @@ const StudentTutorProfile = () => {
                 <div className="px-4 sm:px-6 lg:px-8 max-w-7xl m-auto py-8 text-sm">
 
                     {/* Breadcrumb */}
-                    <div className="text-xs text-gray-600 mb-6">
+                    <div className="text-xs text-gray-600 mb-6 lg:pt-8">
                         <a href="/tutors" className="hover:text-green-700">Find Tutors</a>
                         {expertise[0] && (
                             <>

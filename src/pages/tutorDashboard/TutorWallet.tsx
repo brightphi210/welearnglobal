@@ -117,7 +117,7 @@ async function verifyBankAccount(ibanOrAccount: string): Promise<VerifyResult> {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${IBANFORGE_API_KEY}`,
+                    Authorization: `Bearer ifk_9e52cff5f0e3815faf8120c209ae788ecf07b8967c56c43f28581ce1b44dff7e`,
                 },
                 body: JSON.stringify({ iban: cleaned }),
             });
