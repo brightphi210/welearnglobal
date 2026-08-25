@@ -130,6 +130,38 @@ const validateImageFile = (file: File): string | null => {
     return null;
 };
 
+// Belt-and-braces check on top of the mime-type/size check above: actually
+// tries to decode the file as an image. Catches corrupt files, truncated
+// uploads, or files that were merely renamed to look like an image (a
+// valid content-type header alone doesn't guarantee the bytes decode).
+const isImageFileReadable = (file: File): Promise<boolean> =>
+    new Promise((resolve) => {
+        const objectUrl = URL.createObjectURL(file);
+        const img = new window.Image();
+        const cleanup = () => URL.revokeObjectURL(objectUrl);
+        img.onload = () => {
+            cleanup();
+            resolve(img.naturalWidth > 0 && img.naturalHeight > 0);
+        };
+        img.onerror = () => {
+            cleanup();
+            resolve(false);
+        };
+        img.src = objectUrl;
+    });
+
+// Runs both checks together and surfaces a single, clear error message.
+const validateImageUpload = async (file: File): Promise<string | null> => {
+    const basicError = validateImageFile(file);
+    if (basicError) return basicError;
+
+    const readable = await isImageFileReadable(file);
+    if (!readable) {
+        return "This file doesn't look like a valid image. Please choose another file.";
+    }
+    return null;
+};
+
 // Only revoke if it's actually a blob: URL we created ourselves — never
 // revoke a real server URL (that would break a still-in-use <img src>).
 const revokeIfBlobUrl = (url: string) => {
@@ -483,8 +515,8 @@ const Step1 = ({
             {/* Skills */}
             <div>
                 <Label>Areas of expertise / Skills</Label>
-                <div className="flex flex-col sm:flex-row gap-2 mb-3">
-                    <div className={fieldCls + " flex-1"}>
+                <div className="flex flex-row gap-2 mb-3">
+                    <div className={fieldCls + " flex-1 min-w-0"}>
                         <FiAward size={15} className="text-gray-400 shrink-0" />
                         <input disabled={disabled} className={inpCls} placeholder="e.g. Advanced Calculus, Linear Algebra…"
                             value={skillInput}
@@ -831,10 +863,10 @@ const Step2 = ({ data, setData, disabled }: { data: ProfileData; setData: (d: Pr
                 <SectionTitle icon={FiBook}>Subjects & hourly rate</SectionTitle>
 
                 <Label>Subjects you teach</Label>
-                <div className="flex flex-col sm:flex-row gap-2 mb-3">
+                <div className="flex flex-row gap-2 mb-3">
                     <select
                         disabled={disabled}
-                        className={baseCls + " flex-1"}
+                        className={baseCls + " flex-1 min-w-0"}
                         value={subjectPick}
                         onChange={e => setSubjectPick(e.target.value)}
                     >
@@ -1197,30 +1229,46 @@ const TutorProfile = () => {
     const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
     const [bannerImageFile, setBannerImageFile] = useState<File | null>(null);
 
-    const handleProfileImageChange = (file: File) => {
-        const err = validateImageFile(file);
-        if (err) {
-            toast(`Profile image: ${err}`, { type: "error" });
-            return;
+    // Tracks in-flight async image validation so the upload buttons/preview
+    // can show a "checking image..." state and so a slow validation can't
+    // race a newer file pick.
+    const [isValidatingProfileImage, setIsValidatingProfileImage] = useState(false);
+    const [isValidatingBannerImage, setIsValidatingBannerImage] = useState(false);
+
+    const handleProfileImageChange = async (file: File) => {
+        setIsValidatingProfileImage(true);
+        try {
+            const err = await validateImageUpload(file);
+            if (err) {
+                toast(`Profile image: ${err}`, { type: "error" });
+                return;
+            }
+            setProfileImageFile(file);
+            setProfileImagePreview(prev => {
+                revokeIfBlobUrl(prev);
+                return URL.createObjectURL(file);
+            });
+        } finally {
+            setIsValidatingProfileImage(false);
         }
-        setProfileImageFile(file);
-        setProfileImagePreview(prev => {
-            revokeIfBlobUrl(prev);
-            return URL.createObjectURL(file);
-        });
     };
 
-    const handleBannerImageChange = (file: File) => {
-        const err = validateImageFile(file);
-        if (err) {
-            toast(`Banner image: ${err}`, { type: "error" });
-            return;
+    const handleBannerImageChange = async (file: File) => {
+        setIsValidatingBannerImage(true);
+        try {
+            const err = await validateImageUpload(file);
+            if (err) {
+                toast(`Banner image: ${err}`, { type: "error" });
+                return;
+            }
+            setBannerImageFile(file);
+            setBannerImagePreview(prev => {
+                revokeIfBlobUrl(prev);
+                return URL.createObjectURL(file);
+            });
+        } finally {
+            setIsValidatingBannerImage(false);
         }
-        setBannerImageFile(file);
-        setBannerImagePreview(prev => {
-            revokeIfBlobUrl(prev);
-            return URL.createObjectURL(file);
-        });
     };
 
     const handleBannerImageClear = () => {
@@ -1309,6 +1357,7 @@ const TutorProfile = () => {
     const isStep2Done = !validateStep2(data);
     const isStep3Done = !validateStep3(data);
     const pct = Math.round([isStep1Done, isStep2Done, isStep3Done].filter(Boolean).length / 3 * 100);
+    const isProfileComplete = isStep1Done && isStep2Done && isStep3Done;
 
     // Build the availability payload in the backend's expected shape:
     // [{ day_of_week: "Monday", start_time: "09:00:00", end_time: "11:00:00", is_booked: false }]
@@ -1400,7 +1449,13 @@ const TutorProfile = () => {
     };
 
     const handleSave = () => {
-        // Final guard: re-validate any pending image files before submitting
+        // Final guard: block submission entirely while an image is still
+        // being validated, or if a previously picked file never actually
+        // passed validation (shouldn't happen, but keeps save() honest).
+        if (isValidatingProfileImage || isValidatingBannerImage) {
+            toast("Still checking your images — please wait a moment.", { type: "info" });
+            return;
+        }
         if (profileImageFile) {
             const err = validateImageFile(profileImageFile);
             if (err) { toast(`Profile image: ${err}`, { type: "error" }); return; }
@@ -1485,6 +1540,38 @@ const TutorProfile = () => {
         setMode("edit");
     };
 
+    // Shared primary call-to-action (Continue on steps 1–2, Save/Publish on
+    // step 3). Rendered twice: once pinned to the top on mobile so the user
+    // doesn't have to scroll to act, and once in the footer for desktop /
+    // as the always-present control on larger screens.
+    const renderPrimaryAction = (variant: "mobile" | "footer") => {
+        const sizeCls = variant === "mobile"
+            ? "w-full flex items-center justify-center gap-2 px-4 py-2.5"
+            : "hidden sm:flex items-center gap-2 px-4 sm:px-5 py-2.5 order-2 sm:order-3";
+        const baseCls = `${sizeCls} rounded-full text-sm font-semibold transition-all`;
+
+        if (step < 3) {
+            return (
+                <button onClick={goNext} className={`${baseCls} bg-green-700 text-white hover:bg-green-800`}>
+                    Continue <FiArrowRight size={14} />
+                </button>
+            );
+        }
+
+        return (
+            <button
+                onClick={handlePublish}
+                disabled={isPending || !isProfileComplete || isValidatingProfileImage || isValidatingBannerImage}
+                title={!isProfileComplete ? "Fill in every step before saving" : undefined}
+                className={`${baseCls} bg-green-700 text-white hover:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+                {isPending
+                    ? (hasProfile ? "Saving..." : "Publishing...")
+                    : <>{hasProfile ? "Save Changes" : "Publish Profile"} <FiArrowRight size={14} /></>}
+            </button>
+        );
+    };
+
     if (isLoading && !hasLoadedOnceRef.current) {
         return (
             <div className="md:pl-56 pb-20 md:pb-8 flex items-center justify-center min-h-screen">
@@ -1510,17 +1597,25 @@ const TutorProfile = () => {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
 
                 {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                    <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-1">
-                                {hasProfile ? "Update Profile" : "Create Instructor Profile"}
-                            </h1>
-                            <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize mb-1 ${data.isVerified ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
-                                {data.isVerified ? "Verified" : data.verificationStatus || "Pending"}
-                            </span>
+                <div className="flex flex-col gap-4 mb-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-1">
+                                    {hasProfile ? "Update Profile" : "Create Instructor Profile"}
+                                </h1>
+                                <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold capitalize mb-1 ${data.isVerified ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"}`}>
+                                    {data.isVerified ? "Verified" : data.verificationStatus || "Pending"}
+                                </span>
+                            </div>
+                            <p className="text-sm text-gray-500">{pct}% complete · {pct < 100 ? "Keep going to boost your visibility" : "Your profile is fully set up"}</p>
                         </div>
-                        <p className="text-sm text-gray-500">{pct}% complete · {pct < 100 ? "Keep going to boost your visibility" : "Your profile is fully set up"}</p>
+                    </div>
+
+                    {/* Primary action pinned to the top on mobile, so Continue/Save is
+                        reachable without scrolling down through a long step. */}
+                    <div className="sm:hidden">
+                        {renderPrimaryAction("mobile")}
                     </div>
                 </div>
 
@@ -1590,19 +1685,7 @@ const TutorProfile = () => {
                                     ))}
                                 </div>
 
-                                {step < 3 ? (
-                                    <button onClick={goNext}
-                                        className="flex items-center gap-2 px-4 sm:px-5 py-2.5 bg-green-700 text-white rounded-full text-sm font-semibold hover:bg-green-800 transition-all order-2 sm:order-3">
-                                        Continue <FiArrowRight size={14} />
-                                    </button>
-                                ) : (
-                                    <button onClick={handlePublish} disabled={isPending}
-                                        className="flex items-center gap-2 px-5 sm:px-6 py-2.5 rounded-full text-sm font-semibold transition-all bg-green-700 text-white hover:bg-green-800 disabled:opacity-50 order-2 sm:order-3">
-                                        {isPending
-                                            ? (hasProfile ? "Saving..." : "Publishing...")
-                                            : <>{hasProfile ? "Save Changes" : "Publish Profile"} <FiArrowRight size={14} /></>}
-                                    </button>
-                                )}
+                                {renderPrimaryAction("footer")}
                             </div>
                         </div>
                     </div>
