@@ -96,7 +96,49 @@ export const statusStyles: Record<string, string> = {
 };
 
 const WITHDRAWABLE_STATUSES = ["completed", "cleared"];
-// const IBANFORGE_API_KEY = import.meta.env.VITE_IBANFORGE_KEY || "";
+
+// Only used in local dev — never present in the production bundle's network calls
+// because IS_DEV gates it off. Still, avoid committing a real key to source control;
+// keep it in a local .env file that's gitignored.
+const IBANFORGE_API_KEY = import.meta.env.VITE_IBANFORGE_KEY || "";
+
+// Vite sets this to true under `vite dev` / `vite dev --mode development`,
+// and false in a production build (`vite build`). This is what we use to
+// decide whether to call IBANforge directly (dev) or go through our own
+// same-origin proxy at /api/verify-iban (production, avoids CORS + hides the key).
+const IS_DEV = import.meta.env.DEV;
+
+/** Shared parser for a raw IBANforge JSON response, used by both the
+ *  dev-direct call and the production-proxy call so the shape stays
+ *  identical either way. */
+function parseIbanforgeResponse(data: any): VerifyResult {
+    const bankName =
+        data?.bic?.bank_name || data?.issuer?.name || data?.bank?.name || "";
+    const bic = data?.bic?.code || data?.bic || "";
+    const country = data?.country?.name || data?.country?.code || "";
+
+    if (data.valid || data.is_valid) {
+        return {
+            valid: true,
+            bankName: bankName || "Verified Bank",
+            bic,
+            country,
+            message: bankName
+                ? `Valid IBAN • ${bankName}`
+                : "Valid IBAN format (bank details partially available)",
+            raw: data,
+        };
+    }
+
+    return {
+        valid: false,
+        bankName: "",
+        bic: "",
+        country,
+        message: data.message || "Invalid IBAN",
+        raw: data,
+    };
+}
 
 async function verifyBankAccount(ibanOrAccount: string): Promise<VerifyResult> {
     const cleaned = ibanOrAccount.replace(/\s+/g, "").toUpperCase();
@@ -111,54 +153,48 @@ async function verifyBankAccount(ibanOrAccount: string): Promise<VerifyResult> {
         };
     }
 
-    if (true) {
+    // 1. Try IBANforge — directly in dev (using the local env key), through
+    //    our own /api/verify-iban proxy in production (avoids CORS and never
+    //    exposes the key in the shipped bundle).
+    if (IS_DEV) {
+        if (IBANFORGE_API_KEY) {
+            try {
+                const res = await fetch("https://api.ibanforge.com/v1/iban/validate", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${IBANFORGE_API_KEY}`,
+                    },
+                    body: JSON.stringify({ iban: cleaned }),
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    console.log("IBANforge (dev/direct) response:", data);
+                    return parseIbanforgeResponse(data);
+                }
+            } catch (err) {
+                console.warn(
+                    "IBANforge direct call failed in dev, falling back to OpenIBAN",
+                    err
+                );
+            }
+        }
+    } else {
         try {
-            const res = await fetch('/api/verify-iban', {
+            const res = await fetch("/api/verify-iban", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    // Authorization: `Bearer ${IBANFORGE_API_KEY}`,
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ iban: cleaned }),
             });
 
             if (res.ok) {
                 const data = await res.json();
-                console.log("IBANforge response:", data);
-
-                const bankName =
-                    data?.bic?.bank_name ||
-                    data?.issuer?.name ||
-                    data?.bank?.name ||
-                    "";
-                const bic = data?.bic?.code || data?.bic || "";
-                const country =
-                    data?.country?.name || data?.country?.code || cleaned.slice(0, 2);
-
-                if (data.valid || data.is_valid) {
-                    return {
-                        valid: true,
-                        bankName: bankName || "Verified Bank",
-                        bic,
-                        country,
-                        message: bankName
-                            ? `Valid IBAN • ${bankName}`
-                            : "Valid IBAN format (bank details partially available)",
-                        raw: data,
-                    };
-                }
-
-                return {
-                    valid: false,
-                    bankName: "",
-                    bic: "",
-                    country,
-                    message: data.message || "Invalid IBAN",
-                    raw: data,
-                };
+                console.log("IBANforge (prod/proxy) response:", data);
+                return parseIbanforgeResponse(data);
             }
         } catch (err) {
-            console.warn("IBANforge failed, falling back to OpenIBAN", err);
+            console.warn("IBANforge proxy failed, falling back to OpenIBAN", err);
         }
     }
 
