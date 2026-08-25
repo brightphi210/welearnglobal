@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import BookedTutorClass from '../pages/studentDashboard/BookedTutorClass'
 import StudentMessages from '../pages/studentDashboard/StudentMessages'
+import StudentNotification from '../pages/studentDashboard/StudentNotification'
 import StudentOverview from '../pages/studentDashboard/StudentOverview'
 import StudentProfile from '../pages/studentDashboard/StudentProfile'
 import StudentSessionDetail from '../pages/studentDashboard/StudentSesssionDetails'
@@ -17,6 +18,7 @@ const StudentContent = () => {
                 <Route path='bookings' element={<BookedTutorClass />} />
                 <Route path='tutors' element={<StudentTutors />} />
                 <Route path='profile' element={<StudentProfile />} />
+                <Route path="notifications" element={<StudentNotification />} />
                 <Route path='tutor/:id' element={<StudentTutorProfile />} />
                 <Route path="session/:id" element={<StudentSessionDetail />} />
             </Routes>

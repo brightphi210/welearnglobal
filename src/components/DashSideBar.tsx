@@ -94,7 +94,7 @@ const DashSideBar = () => {
                     {/* Logout */}
                     <button
                         onClick={() => setShowLogoutConfirm(true)}
-                        className="flex flex-col items-center justify-center w-14 h-12 rounded-lg transition-all text-red-300 hover:text-red-400"
+                        className="flex flex-col items-center justify-center w-14 h-12 rounded-lg transition-all text-red-100 hover:text-red-100"
                         title="Sign Out"
                     >
                         <FiLogOut size={24} />

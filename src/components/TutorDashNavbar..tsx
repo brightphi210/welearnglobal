@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { FiBell, FiLogOut, FiMessageSquare } from "react-icons/fi";
-import { IoNotificationsOutline } from "react-icons/io5";
 import { Link, useNavigate } from "react-router-dom";
 import logo from '../assets/logo1.png';
 import { useGetUserProfile } from "../hooks/queries/allQueries";
@@ -51,10 +50,12 @@ const TutorDashNavbar = () => {
                             </button>
                         </Link>
 
-                        <button className="relative p-2 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all hidden sm:flex items-center justify-center">
-                            <FiBell size={20} />
-                            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-                        </button>
+                        <Link to={'/tutor/dashboard/notifications'}>
+                            <button className="relative p-2 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all hidden sm:flex items-center justify-center">
+                                <FiBell size={20} />
+                                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+                            </button>
+                        </Link>
 
                         {/* ── Profile trigger + dropdown ── */}
                         <div className="relative" ref={profileMenuRef}>
@@ -127,11 +128,13 @@ const TutorDashNavbar = () => {
                             )}
                         </div>
 
-                        <button
-                            className="text-2xl bg-gray-200 rounded-full p-2 justify-center items-center lg:hidden flex"
-                        >
-                            <IoNotificationsOutline />
-                        </button>
+                        <Link to={'/tutor/dashboard/notifications'}>
+                            <button
+                                className="text-2xl bg-gray-200 rounded-full p-2 justify-center items-center lg:hidden flex"
+                            >
+                                <FiBell />
+                            </button>
+                        </Link>
                     </div>
                 </div>
             </div>

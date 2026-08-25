@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import TutorBookings from '../pages/tutorDashboard/TutorBookings'
 import TutorMessages from '../pages/tutorDashboard/TutorMessages'
+import TutorNotification from '../pages/tutorDashboard/TutorNotification'
 import TutorOverview from '../pages/tutorDashboard/TutorOverview'
 import TutorProfile from '../pages/tutorDashboard/TutorProfile'
 import TutorSessionDetails from '../pages/tutorDashboard/TutorSessionDetails'
@@ -17,6 +18,7 @@ const TutorContent = () => {
                 <Route path='bookings' element={<TutorBookings />} />
                 <Route path='messages' element={<TutorMessages />} />
                 <Route path='profile' element={<TutorProfile />} />
+                <Route path="notifications" element={<TutorNotification />} />
                 <Route path='wallet/transactions' element={<TutorTransactions />} />
                 <Route path='sessions/:id' element={<TutorSessionDetails />} />
             </Routes>
