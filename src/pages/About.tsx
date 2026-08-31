@@ -5,6 +5,9 @@ import {
 } from "react-icons/fa";
 import { FiArrowRight } from "react-icons/fi";
 import { Link } from "react-router-dom";
+import developer from '../assets/bio.png';
+import ceo from '../assets/ceo.jpeg';
+import coceo from '../assets/coceo.jpeg';
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
 
@@ -34,9 +37,9 @@ const stats = [
 ];
 
 const team = [
-    { name: "Amara Okafor", role: "Co-Founder & CEO", img: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&q=80" },
-    { name: "Daniel Wu", role: "Co-Founder & CTO", img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&q=80" },
-    { name: "Priya Nair", role: "Head of Tutor Success", img: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=300&q=80" },
+    { name: "Amaechi Nkwa", role: "CEO & Manager", img: ceo },
+    { name: "Daniel Wu", role: "Co-CEO", img: coceo },
+    { name: "Bright Philip", role: "Software Engineer", img: developer },
 ];
 
 const About = () => {
@@ -125,8 +128,8 @@ const About = () => {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                         {team.map((m) => (
-                            <div key={m.name} className="text-center">
-                                <img src={m.img} alt={m.name} className="w-24 h-24 rounded-full object-cover mx-auto mb-4" />
+                            <div key={m.name} className="text-center ">
+                                <img src={m.img} alt={m.name} className="w-24 h-24 bg-gray-200 rounded-full object-cover mx-auto mb-4" />
                                 <p className="font-bold text-gray-900 text-sm mb-0.5">{m.name}</p>
                                 <p className="text-xs text-gray-400">{m.role}</p>
                             </div>
