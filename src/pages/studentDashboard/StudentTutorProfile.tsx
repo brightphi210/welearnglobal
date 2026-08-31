@@ -601,7 +601,6 @@ const StudentTutorProfile = () => {
     const rate = Number(tutor.hourly_rate) || 0;
     const totalSessions = tutor.total_sessions ?? 0;
 
-    // Combine subjects + skills for "Areas of Expertise", de-duplicated
     const expertise = Array.from(new Set([...(tutor.skills || [])]));
     const subjects = Array.from(new Set([...(tutor.subjects || [])]));
 
@@ -650,10 +649,6 @@ const StudentTutorProfile = () => {
         });
     };
 
-    // NOTE: /chat/start/ expects the tutor's USER id, not the tutor_profile id used
-    // for bookings above. If `tutor.user` (or similar) isn't present on this payload,
-    // swap `tutor.id` below for whatever field your useGetSingleTutor response exposes
-    // for the underlying user account.
     const handleStartChat = (message: string) => {
         setChatError(null);
 
@@ -833,8 +828,8 @@ const StudentTutorProfile = () => {
                                             <div className="space-y-4">
                                                 {experience.map((exp: any, idx: number) => (
                                                     <div key={idx}>
-                                                        <h4 className="font-semibold text-xs text-gray-900">{exp.role}</h4>
-                                                        <p className="text-[10px] text-green-700">{exp.org}{exp.period ? ` • ${exp.period}` : ""}</p>
+                                                        <h4 className="font-semibold text-xs text-gray-900">{exp.title}</h4>
+                                                        <p className="text-[10px] text-green-700">{exp.company}{exp.description ? ` • ${exp.description}` : ""}</p>
                                                     </div>
                                                 ))}
                                             </div>
@@ -853,7 +848,7 @@ const StudentTutorProfile = () => {
                                                 {education.map((edu: any, idx: number) => (
                                                     <div key={idx}>
                                                         <h4 className="font-semibold text-xs text-gray-900">{edu.degree}</h4>
-                                                        <p className="text-[10px] text-green-700">{edu.school}{edu.year ? ` • ${edu.year}` : ""}</p>
+                                                        <p className="text-[10px] text-green-700">{edu.institution} {edu.description ? ` • ${edu.description}` : ""}</p>
                                                     </div>
                                                 ))}
                                             </div>

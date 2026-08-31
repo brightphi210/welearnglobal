@@ -53,6 +53,7 @@ interface ProfileData {
 
 /* ─── Constants ──────────────────────────────────────────────────────── */
 const SUBJECTS = ["Mathematics", "Physics", "Chemistry", "Biology", "English", "Spanish", "French", "Music", "Programming", "Design", "Business", "History"];
+const MAX_SUBJECTS = 5;
 const LANGUAGES = ["English", "Spanish", "French", "Mandarin Chinese", "Arabic"];
 
 const STEPS = [
@@ -130,10 +131,6 @@ const validateImageFile = (file: File): string | null => {
     return null;
 };
 
-// Belt-and-braces check on top of the mime-type/size check above: actually
-// tries to decode the file as an image. Catches corrupt files, truncated
-// uploads, or files that were merely renamed to look like an image (a
-// valid content-type header alone doesn't guarantee the bytes decode).
 const isImageFileReadable = (file: File): Promise<boolean> =>
     new Promise((resolve) => {
         const objectUrl = URL.createObjectURL(file);
@@ -150,7 +147,6 @@ const isImageFileReadable = (file: File): Promise<boolean> =>
         img.src = objectUrl;
     });
 
-// Runs both checks together and surfaces a single, clear error message.
 const validateImageUpload = async (file: File): Promise<string | null> => {
     const basicError = validateImageFile(file);
     if (basicError) return basicError;
@@ -162,8 +158,6 @@ const validateImageUpload = async (file: File): Promise<string | null> => {
     return null;
 };
 
-// Only revoke if it's actually a blob: URL we created ourselves — never
-// revoke a real server URL (that would break a still-in-use <img src>).
 const revokeIfBlobUrl = (url: string) => {
     if (url && url.startsWith("blob:")) {
         URL.revokeObjectURL(url);
@@ -171,10 +165,6 @@ const revokeIfBlobUrl = (url: string) => {
 };
 
 /* ─── Time helpers ───────────────────────────────────────────────────── */
-// All times are stored internally as 24hr "HH:MM" strings. The picker itself
-// is always rendered in 12hr format with an explicit AM/PM toggle, so the
-// displayed value never depends on the browser/OS locale the way a native
-// <input type="time"> does.
 const to12Hour = (time24: string): { hour: number; minute: number; period: "AM" | "PM" } => {
     if (!time24) return { hour: 9, minute: 0, period: "AM" };
     const [hStr, mStr] = time24.split(":");
@@ -201,8 +191,6 @@ interface TimePickerInputProps {
     disabled?: boolean;
 }
 
-// A 12hr time picker with an explicit, always-visible AM/PM toggle so the
-// period never has to be inferred/guessed by the user or the browser.
 const TimePickerInput = ({ value, onChange, disabled }: TimePickerInputProps) => {
     const { hour, minute, period } = to12Hour(value);
 
@@ -289,11 +277,9 @@ const EmptyState = ({ onCreate }: { onCreate: () => void }) => (
     </div>
 );
 
-
-
 const fieldCls = "flex items-center gap-3 border border-gray-200 rounded-lg px-4 py-3 focus-within:border-green-500 focus-within:ring-2 focus-within:ring-green-100 transition-all bg-white";
 const inpCls = "flex-1 min-w-0 border-none outline-none text-sm text-gray-800 placeholder-gray-400 bg-transparent";
-const baseCls = "w-full border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-green-800  transition-all bg-white";
+const baseCls = "w-full border border-gray-200 rounded-md px-4 py-3 text-xs text-gray-800 placeholder-gray-400 outline-none focus:border-green-800  transition-all bg-white";
 
 const Label = ({ children }: { children: React.ReactNode }) => (
     <label className="block text-sm font-semibold text-gray-800 mb-2">{children}</label>
@@ -323,7 +309,6 @@ const sanitizeMoneyInput = (raw: string) => {
     return cleaned;
 };
 
-// Adds thousand separators for display only, e.g. "1234.5" -> "1,234.5"
 const formatMoneyDisplay = (value: string) => {
     if (!value) return "";
     const [whole, decimals] = value.split(".");
@@ -491,12 +476,12 @@ const Step1 = ({
                             className={inpCls}
                             type="tel"
                             inputMode="tel"
-                            placeholder="+1 5550001234"
+                            placeholder="5550001234"
                             value={data.phone}
                             onChange={e => setData({ ...data, phone: formatPhoneInput(e.target.value) })}
                         />
                     </div>
-                    <p className="text-xs text-gray-400 mt-1.5">Numbers only, e.g. +15550001234</p>
+                    <p className="text-xs text-gray-400 mt-1.5">Numbers only, e.g. 5550001234</p>
                 </div>
             </div>
 
@@ -598,7 +583,7 @@ interface MiniFormProps {
 }
 
 const MiniForm = ({ title, onClose, onAdd, disabled, children }: MiniFormProps) => (
-    <div className="mt-1 p-4 sm:p-5 bg-white rounded-2xl">
+    <div className="mt-1">
         <div className="flex items-center justify-between mb-4">
             <p className="text-sm font-bold text-gray-900">{title}</p>
             <button onClick={onClose} className="p-1 text-gray-400 hover:text-gray-600 rounded-lg transition-all"><FiX size={15} /></button>
@@ -638,7 +623,6 @@ const AvailabilitySection = ({
             return {
                 ...d,
                 enabled: enabling,
-                // seed a first slot when switching a day on for the first time
                 slots: enabling && d.slots.length === 0 ? [emptyTimeSlot(1)] : d.slots,
             };
         });
@@ -694,7 +678,6 @@ const AvailabilitySection = ({
                             key={dayAv.day}
                             className={`rounded-xl border p-3.5 transition-all ${dayAv.enabled ? "bg-white border-gray-200" : "bg-gray-100/60 border-gray-200"}`}
                         >
-                            {/* Day header row */}
                             <div className="flex items-center justify-between gap-3 flex-wrap">
                                 <div className="flex items-center gap-3">
                                     <button
@@ -737,7 +720,6 @@ const AvailabilitySection = ({
                                 )}
                             </div>
 
-                            {/* Time slots */}
                             {dayAv.enabled && (
                                 <div className="mt-3 flex flex-col gap-2">
                                     {dayAv.slots.map(slot => {
@@ -797,21 +779,46 @@ const AvailabilitySection = ({
 const Step2 = ({ data, setData, disabled }: { data: ProfileData; setData: (d: ProfileData) => void; disabled?: boolean }) => {
     const [showExpForm, setShowExpForm] = useState(false);
     const [showEduForm, setShowEduForm] = useState(false);
-    const [subjectPick, setSubjectPick] = useState("");
+    const [subjectSearch, setSubjectSearch] = useState("");
+    const [showSubjectSuggestions, setShowSubjectSuggestions] = useState(false);
 
     const [newExp, setNewExp] = useState<Omit<ExperienceItem, "id">>({ title: "", company: "", description: "" });
     const [newEdu, setNewEdu] = useState<Omit<EducationItem, "id">>({ degree: "", institution: "", description: "" });
 
     const nextId = (items: { id: number }[]) => (items.length ? Math.max(...items.map(i => i.id)) + 1 : 1);
 
-    const addSubject = () => {
-        const s = subjectPick.trim();
-        if (s && !data.subjects.includes(s)) {
-            setData({ ...data, subjects: [...data.subjects, s] });
-        }
-        setSubjectPick("");
+    const filteredSubjects = SUBJECTS.filter(
+        (s) =>
+            !data.subjects.includes(s) &&
+            s.toLowerCase().includes(subjectSearch.trim().toLowerCase())
+    );
+
+    const canAddMoreSubjects = data.subjects.length < MAX_SUBJECTS;
+
+    const addSubject = (raw: string) => {
+        const s = raw.trim();
+        if (!s || data.subjects.includes(s) || !canAddMoreSubjects) return;
+        setData({ ...data, subjects: [...data.subjects, s] });
+        setSubjectSearch("");
+        setShowSubjectSuggestions(false);
     };
-    const removeSubject = (s: string) => setData({ ...data, subjects: data.subjects.filter(x => x !== s) });
+
+    const removeSubject = (s: string) =>
+        setData({ ...data, subjects: data.subjects.filter((x) => x !== s) });
+
+    const handleSubjectKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
+            if (filteredSubjects.length > 0 && subjectSearch.trim()) {
+                addSubject(filteredSubjects[0]);
+            } else if (subjectSearch.trim()) {
+                addSubject(subjectSearch);
+            }
+        }
+        if (e.key === "Escape") {
+            setShowSubjectSuggestions(false);
+        }
+    };
 
     const addExp = () => {
         if (!newExp.title || !newExp.company) return;
@@ -862,37 +869,109 @@ const Step2 = ({ data, setData, disabled }: { data: ProfileData; setData: (d: Pr
             <div className="bg-gray-50 rounded-2xl border border-gray-200 p-4 sm:p-5">
                 <SectionTitle icon={FiBook}>Subjects & hourly rate</SectionTitle>
 
-                <Label>Subjects you teach</Label>
-                <div className="flex flex-row gap-2 mb-3">
-                    <select
-                        disabled={disabled}
-                        className={baseCls + " flex-1 min-w-0"}
-                        value={subjectPick}
-                        onChange={e => setSubjectPick(e.target.value)}
-                    >
-                        <option value="">Select a subject to add</option>
-                        {SUBJECTS.filter(s => !data.subjects.includes(s)).map(s => <option key={s}>{s}</option>)}
-                    </select>
-                    <button disabled={disabled || !subjectPick} onClick={addSubject}
-                        className="px-4 py-3 bg-green-700 text-white rounded-xl text-sm font-semibold hover:bg-green-800 transition-all flex items-center justify-center gap-1.5 shrink-0 disabled:opacity-50">
-                        <FiPlus size={14} /> Add
-                    </button>
+                <Label>
+                    Subjects you teach{" "}
+                    <span className="font-normal text-gray-400">
+                        ({data.subjects.length}/{MAX_SUBJECTS})
+                    </span>
+                </Label>
+
+                <div className="relative mb-3">
+                    <div className={fieldCls + " flex-1 min-w-0"}>
+                        <FiBook size={15} className="text-gray-400 shrink-0" />
+                        <input
+                            disabled={disabled || !canAddMoreSubjects}
+                            className={inpCls}
+                            placeholder={
+                                canAddMoreSubjects
+                                    ? "Search or type a subject (e.g. Calculus, Other…)"
+                                    : `Maximum of ${MAX_SUBJECTS} subjects reached`
+                            }
+                            value={subjectSearch}
+                            onChange={(e) => {
+                                setSubjectSearch(e.target.value);
+                                setShowSubjectSuggestions(true);
+                            }}
+                            onFocus={() => setShowSubjectSuggestions(true)}
+                            onBlur={() => {
+                                setTimeout(() => setShowSubjectSuggestions(false), 150);
+                            }}
+                            onKeyDown={handleSubjectKeyDown}
+                        />
+                        {subjectSearch.trim() && canAddMoreSubjects && (
+                            <button
+                                type="button"
+                                disabled={disabled}
+                                onClick={() => addSubject(subjectSearch)}
+                                className="shrink-0 text-xs font-semibold text-green-700 hover:text-green-800 px-2"
+                            >
+                                Add
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Suggestions dropdown */}
+                    {showSubjectSuggestions && canAddMoreSubjects && (
+                        <div className="absolute z-20 left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-lg">
+                            {filteredSubjects.length > 0 ? (
+                                filteredSubjects.map((s) => (
+                                    <button
+                                        key={s}
+                                        type="button"
+                                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-800 transition-colors"
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        onClick={() => addSubject(s)}
+                                    >
+                                        {s}
+                                    </button>
+                                ))
+                            ) : subjectSearch.trim() ? (
+                                <button
+                                    type="button"
+                                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-800 transition-colors"
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => addSubject(subjectSearch)}
+                                >
+                                    Add “{subjectSearch.trim()}” as custom subject
+                                </button>
+                            ) : (
+                                <p className="px-4 py-2.5 text-xs text-gray-400">
+                                    Type to search the list or enter a custom subject
+                                </p>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {data.subjects.length > 0 ? (
                     <div className="flex flex-wrap gap-2 mb-5">
-                        {data.subjects.map(s => (
-                            <span key={s} className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 rounded-full text-xs font-semibold">
+                        {data.subjects.map((s) => (
+                            <span
+                                key={s}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-700 rounded-full text-xs font-semibold"
+                            >
                                 <FaGraduationCap size={11} className="text-green-700" />
                                 {s}
-                                <button onClick={() => removeSubject(s)} className="text-gray-400 hover:text-red-500 transition-colors">
+                                <button
+                                    type="button"
+                                    onClick={() => removeSubject(s)}
+                                    className="text-gray-400 hover:text-red-500 transition-colors"
+                                >
                                     <FiX size={11} />
                                 </button>
                             </span>
                         ))}
                     </div>
                 ) : (
-                    <p className="text-xs text-gray-400 italic mb-5">No subjects added yet — add at least one so students know what you teach.</p>
+                    <p className="text-xs text-gray-400 italic mb-5">
+                        No subjects added yet — search the list or type your own (max {MAX_SUBJECTS}).
+                    </p>
+                )}
+
+                {!canAddMoreSubjects && (
+                    <p className="text-[11px] text-amber-600 font-medium mb-4">
+                        You’ve reached the maximum of {MAX_SUBJECTS} subjects.
+                    </p>
                 )}
 
                 <Label>Hourly rate</Label>
@@ -943,11 +1022,11 @@ const Step2 = ({ data, setData, disabled }: { data: ProfileData; setData: (d: Pr
                     {showExpForm && (
                         <MiniForm title="Add experience" onClose={() => setShowExpForm(false)} onAdd={addExp}
                             disabled={!newExp.title || !newExp.company}>
-                            <input className={baseCls} placeholder="Role / title e.g. Senior Math Tutor"
+                            <input className={baseCls} placeholder="Role: (e.g. Math Tutor)"
                                 value={newExp.title} onChange={e => setNewExp(prev => ({ ...prev, title: e.target.value }))} />
-                            <input className={baseCls} placeholder="Organisation e.g. WeLearnGlobal"
+                            <input className={baseCls} placeholder="Company: (e.g. WeLearnGlobal)"
                                 value={newExp.company} onChange={e => setNewExp(prev => ({ ...prev, company: e.target.value }))} />
-                            <input className={baseCls} placeholder="Period / description e.g. 2021 – Present"
+                            <input className={baseCls} placeholder="Period (e.g. 2021 – Present)"
                                 value={newExp.description} onChange={e => setNewExp(prev => ({ ...prev, description: e.target.value }))} />
                         </MiniForm>
                     )}
@@ -983,11 +1062,11 @@ const Step2 = ({ data, setData, disabled }: { data: ProfileData; setData: (d: Pr
                     {showEduForm && (
                         <MiniForm title="Add education" onClose={() => setShowEduForm(false)} onAdd={addEdu}
                             disabled={!newEdu.degree || !newEdu.institution}>
-                            <input className={baseCls} placeholder="Degree e.g. PhD in Theoretical Mathematics"
+                            <input className={baseCls} placeholder="Degree (e.g. PhD in Mathematics)"
                                 value={newEdu.degree} onChange={e => setNewEdu(prev => ({ ...prev, degree: e.target.value }))} />
-                            <input className={baseCls} placeholder="School e.g. Cambridge University"
+                            <input className={baseCls} placeholder="School (e.g. Cambridge University)"
                                 value={newEdu.institution} onChange={e => setNewEdu(prev => ({ ...prev, institution: e.target.value }))} />
-                            <input className={baseCls} placeholder="Description e.g. Graduated 2014"
+                            <input className={baseCls} placeholder="Duration (e.g. Graduated 2014)"
                                 value={newEdu.description} onChange={e => setNewEdu(prev => ({ ...prev, description: e.target.value }))} />
                         </MiniForm>
                     )}
@@ -1038,7 +1117,6 @@ function safeParseArray<T extends Record<string, any>>(value: unknown): (T & { i
     return arr.map((item, idx) => ({ ...item, id: typeof item?.id === "number" ? item.id : idx + 1 }));
 }
 
-
 function normalizeSkills(value: unknown): string[] {
     if (Array.isArray(value)) return value.filter(Boolean);
     if (typeof value === "string" && value.trim()) {
@@ -1084,7 +1162,6 @@ function normalizeAvailability(value: unknown): DayAvailability[] {
         });
     }
 
-    // Legacy nested format: entries look like { day, enabled, slots: [...] }
     return DAYS_OF_WEEK.map(d => {
         const found = arr.find((a: any) => a?.day === d.key);
         if (!found) return { day: d.key, enabled: false, slots: [] };
@@ -1114,9 +1191,7 @@ const emptyProfileData: ProfileData = {
     isVerified: false, verificationStatus: "pending",
 };
 
-/* ─── Step validation ────────────────────────────────────────────────
-   Each function returns null when the step's fields are all filled in,
-   or a short human-readable error message describing what's missing. */
+/* ─── Step validation ──────────────────────────────────────────────── */
 const validateStep1 = (d: ProfileData): string | null => {
     if (!d.title.trim()) return "Please add your professional title.";
     if (!d.phone.trim()) return "Please add your phone number.";
@@ -1153,8 +1228,6 @@ const getStepError = (step: Step, d: ProfileData): string | null => {
 };
 
 /* ─── Backend error helpers ──────────────────────────────────────────── */
-// Pulls every string message out of a DRF-style error object, regardless of
-// the field name(s) used (e.g. "non_field_errors", "start_time", etc).
 const extractMessages = (entry: unknown): string[] => {
     if (!entry || typeof entry !== "object") return [];
     const messages: string[] = [];
@@ -1179,16 +1252,9 @@ const TutorProfile = () => {
     const [profileImagePreview, setProfileImagePreview] = useState<string>("");
     const [bannerImagePreview, setBannerImagePreview] = useState<string>("");
 
-    // Backend validation errors for the availability step, keyed by "day-slotId".
     const [slotErrors, setSlotErrors] = useState<Record<string, string[]>>({});
-    // Remembers, in submit order, which (day, slotId) each entry of the
-    // availability payload corresponded to — needed to map the backend's
-    // parallel error array back onto the right slot.
     const lastAvailabilityMappingRef = useRef<{ day: string; slotId: number }[]>([]);
 
-    // Tracks whether we've completed at least one successful load, so a
-    // background refetch (e.g. after a failed save) doesn't blank the whole
-    // form back to a bare loading screen.
     const hasLoadedOnceRef = useRef(false);
 
     const clearSlotError = (day: string, slotId: number) => {
@@ -1229,9 +1295,6 @@ const TutorProfile = () => {
     const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
     const [bannerImageFile, setBannerImageFile] = useState<File | null>(null);
 
-    // Tracks in-flight async image validation so the upload buttons/preview
-    // can show a "checking image..." state and so a slow validation can't
-    // race a newer file pick.
     const [isValidatingProfileImage, setIsValidatingProfileImage] = useState(false);
     const [isValidatingBannerImage, setIsValidatingBannerImage] = useState(false);
 
@@ -1279,8 +1342,6 @@ const TutorProfile = () => {
         });
     };
 
-    // Revoke any outstanding blob preview when the component unmounts, so we
-    // don't leak memory across page navigations.
     useEffect(() => {
         return () => {
             revokeIfBlobUrl(profileImagePreview);
@@ -1289,7 +1350,6 @@ const TutorProfile = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Sync name/email from the base user profile
     useEffect(() => {
         if (user) {
             setData(prev => ({
@@ -1304,16 +1364,6 @@ const TutorProfile = () => {
         }
     }, [user]);
 
-    // Sync tutor-specific fields whenever the fetched tutor profile changes.
-    //
-    // IMPORTANT: profile_image / banner are only taken from the server when
-    // we don't already have a preview set (prev || ...). This matters
-    // because this effect can re-run after a background refetch — e.g. one
-    // triggered following a *failed* save — at which point `tutor` still
-    // holds the OLD saved values. Without the `prev ||` guard here, a fresh
-    // locally-picked image preview would get silently overwritten by that
-    // stale server URL and appear "broken" until the user re-selected the
-    // file. Keep both fields guarded the same way so neither can regress.
     useEffect(() => {
         if (!tutor) return;
 
@@ -1343,8 +1393,6 @@ const TutorProfile = () => {
             verificationStatus: tutor.verification_status ?? prev.verificationStatus,
         }));
 
-        // banner/profile_image now come back as real uploaded file URLs —
-        // never clobber a locally-selected preview that hasn't been saved yet.
         if (tutor.banner) {
             setBannerImagePreview(prev => prev || tutor.banner);
         }
@@ -1359,8 +1407,6 @@ const TutorProfile = () => {
     const pct = Math.round([isStep1Done, isStep2Done, isStep3Done].filter(Boolean).length / 3 * 100);
     const isProfileComplete = isStep1Done && isStep2Done && isStep3Done;
 
-    // Build the availability payload in the backend's expected shape:
-    // [{ day_of_week: "Monday", start_time: "09:00:00", end_time: "11:00:00", is_booked: false }]
     const buildAvailabilityPayload = () =>
         data.availability
             .filter(d => d.enabled)
@@ -1373,9 +1419,6 @@ const TutorProfile = () => {
                 }))
             );
 
-    // Parallel to buildAvailabilityPayload() — remembers which (day, slotId)
-    // produced each entry, so a same-shaped array of backend errors can be
-    // mapped straight back onto the slot that caused it.
     const buildAvailabilityMapping = () =>
         data.availability
             .filter(d => d.enabled)
@@ -1419,10 +1462,6 @@ const TutorProfile = () => {
         return fd;
     }
 
-    // Handles the availability-specific error shape:
-    // [ {}, { non_field_errors: ["end_time must be after start_time."] }, {}, {} ]
-    // — an array parallel to the submitted availability payload, one entry
-    // per slot. Returns true if it found (and applied) availability errors.
     const applyAvailabilityErrors = (respData: unknown): boolean => {
         if (!Array.isArray(respData)) return false;
 
@@ -1449,9 +1488,6 @@ const TutorProfile = () => {
     };
 
     const handleSave = () => {
-        // Final guard: block submission entirely while an image is still
-        // being validated, or if a previously picked file never actually
-        // passed validation (shouldn't happen, but keeps save() honest).
         if (isValidatingProfileImage || isValidatingBannerImage) {
             toast("Still checking your images — please wait a moment.", { type: "info" });
             return;
@@ -1467,7 +1503,6 @@ const TutorProfile = () => {
 
         const payload = buildPayload();
 
-        // Reset previous errors and remember the slot mapping for this submission
         setSlotErrors({});
         lastAvailabilityMappingRef.current = buildAvailabilityMapping();
 
@@ -1482,11 +1517,8 @@ const TutorProfile = () => {
             onError: (e: any) => {
                 const respData = e.response?.data;
 
-                // Availability errors come back as an array parallel to what was sent.
                 if (applyAvailabilityErrors(respData)) return;
 
-                // Otherwise fall back to a generic message/detail, or any other
-                // field-level error object the backend might return.
                 const genericMessage =
                     respData?.message ||
                     respData?.detail ||
@@ -1497,8 +1529,6 @@ const TutorProfile = () => {
         });
     };
 
-    // Validates every step before submitting. If any step is incomplete,
-    // jumps to the first incomplete step and shows the relevant error.
     const handlePublish = () => {
         for (let s = 1; s <= 3; s++) {
             const err = getStepError(s as Step, data);
@@ -1511,7 +1541,6 @@ const TutorProfile = () => {
         handleSave();
     };
 
-    // Moves forward only if the current step is fully filled in.
     const goNext = () => {
         const err = getStepError(step, data);
         if (err) {
@@ -1521,8 +1550,6 @@ const TutorProfile = () => {
         setStep(s => Math.min(3, s + 1) as Step);
     };
 
-    // Jumping directly to a step (via sidebar nav or dots) is only allowed
-    // once every step before it has been fully filled in.
     const goToStep = (target: Step) => {
         for (let s = 1; s < target; s++) {
             const err = getStepError(s as Step, data);
@@ -1540,10 +1567,6 @@ const TutorProfile = () => {
         setMode("edit");
     };
 
-    // Shared primary call-to-action (Continue on steps 1–2, Save/Publish on
-    // step 3). Rendered twice: once pinned to the top on mobile so the user
-    // doesn't have to scroll to act, and once in the footer for desktop /
-    // as the always-present control on larger screens.
     const renderPrimaryAction = (variant: "mobile" | "footer") => {
         const sizeCls = variant === "mobile"
             ? "w-full flex items-center justify-center gap-2 px-4 py-2.5"
@@ -1580,7 +1603,6 @@ const TutorProfile = () => {
         );
     }
 
-    // No profile yet, and the user hasn't started creating one -> empty state only.
     if (mode === "empty") {
         return (
             <div className="md:pl-56 pb-20 md:pb-8 pt-20 bg-gray-50 min-h-screen">
@@ -1612,8 +1634,6 @@ const TutorProfile = () => {
                         </div>
                     </div>
 
-                    {/* Primary action pinned to the top on mobile, so Continue/Save is
-                        reachable without scrolling down through a long step. */}
                     <div className="sm:hidden">
                         {renderPrimaryAction("mobile")}
                     </div>
@@ -1677,7 +1697,6 @@ const TutorProfile = () => {
                                     <FiArrowLeft size={14} /> Previous
                                 </button>
 
-                                {/* Dot indicators */}
                                 <div className="flex items-center gap-2 order-3 sm:order-2 w-full sm:w-auto justify-center">
                                     {STEPS.map(s => (
                                         <button key={s.id} onClick={() => goToStep(s.id as Step)}

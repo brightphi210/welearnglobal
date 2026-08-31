@@ -1,14 +1,21 @@
-import { FiFacebook, FiInstagram, FiLinkedin, FiTwitter } from "react-icons/fi";
+import { AiFillTikTok } from "react-icons/ai";
+import { FiFacebook, FiInstagram } from "react-icons/fi";
+import { Link } from "react-router-dom";
 
 const Footer = () => {
     const columns = [
         {
             heading: "Platform",
-            links: ["How it works"],
+            links: [
+                { label: "How it works", link: "/how-it-works" },
+            ],
         },
         {
             heading: "Support",
-            links: ["About Us", "Contact Us"],
+            links: [
+                { label: "About Us", link: "/about" },
+                { label: "Contact Us", link: "/contact" },
+            ],
         },
         {
             heading: "Join Us",
@@ -16,12 +23,11 @@ const Footer = () => {
             cta: true,
         },
     ];
-
     const socials = [
-        { icon: <FiTwitter size={16} />, href: "#" },
-        { icon: <FiInstagram size={16} />, href: "#" },
-        { icon: <FiLinkedin size={16} />, href: "#" },
-        { icon: <FiFacebook size={16} />, href: "#" },
+        { icon: <AiFillTikTok size={16} />, href: "https://www.tiktok.com/@welearnglobal?_r=1&_t=ZS-98wK8d0fiIn" },
+        { icon: <FiInstagram size={16} />, href: "https://www.instagram.com/welearnglobal?igsh=MXczc2M1ZmpxMjJ5Ng==" },
+        // { icon: <FiLinkedin size={16} />, href: "#" },
+        { icon: <FiFacebook size={16} />, href: "https://www.facebook.com/share/18VCaVZ8Jf/?mibextid=wwXIfr" },
     ];
 
     return (
@@ -135,6 +141,7 @@ const Footer = () => {
                             >
                                 {col.heading}
                             </h4>
+
                             {col.cta ? (
                                 <div>
                                     <p
@@ -147,8 +154,9 @@ const Footer = () => {
                                     >
                                         Become a verified tutor today.
                                     </p>
-                                    <a
-                                        href="/signup"
+
+                                    <Link
+                                        to="/signup"
                                         style={{
                                             display: "inline-block",
                                             padding: "9px 20px",
@@ -161,18 +169,18 @@ const Footer = () => {
                                             transition: "all 0.2s",
                                         }}
                                         onMouseEnter={(e) => {
-                                            const el = e.currentTarget as HTMLElement;
+                                            const el = e.currentTarget;
                                             el.style.backgroundColor = "#111827";
                                             el.style.color = "#ffffff";
                                         }}
                                         onMouseLeave={(e) => {
-                                            const el = e.currentTarget as HTMLElement;
+                                            const el = e.currentTarget;
                                             el.style.backgroundColor = "transparent";
                                             el.style.color = "#111827";
                                         }}
                                     >
                                         Apply Now
-                                    </a>
+                                    </Link>
                                 </div>
                             ) : (
                                 <ul
@@ -185,25 +193,25 @@ const Footer = () => {
                                         gap: "10px",
                                     }}
                                 >
-                                    {col.links.map((link) => (
-                                        <li key={link}>
-                                            <a
-                                                href="#"
+                                    {col.links.map((item) => (
+                                        <li key={item.label}>
+                                            <Link
+                                                to={item.link}
                                                 style={{
                                                     fontSize: "14px",
                                                     color: "#6b7280",
                                                     textDecoration: "none",
                                                     transition: "color 0.2s",
                                                 }}
-                                                onMouseEnter={(e) =>
-                                                    ((e.target as HTMLElement).style.color = "#10b981")
-                                                }
-                                                onMouseLeave={(e) =>
-                                                    ((e.target as HTMLElement).style.color = "#6b7280")
-                                                }
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.color = "#10b981";
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.color = "#6b7280";
+                                                }}
                                             >
-                                                {link}
-                                            </a>
+                                                {item.label}
+                                            </Link>
                                         </li>
                                     ))}
                                 </ul>

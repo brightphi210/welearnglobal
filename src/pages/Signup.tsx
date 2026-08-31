@@ -159,7 +159,7 @@ const Signup = () => {
                                         }`}
                                 >
                                     <FiBookOpen size={15} />
-                                    Student
+                                    Student(Guardian)
                                 </button>
                                 <button
                                     type="button"

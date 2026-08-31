@@ -7,6 +7,7 @@ import {
     FaUserCheck,
 } from "react-icons/fa";
 import { FiArrowRight, FiCheck, FiHelpCircle } from "react-icons/fi";
+import { Link } from "react-router-dom";
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
 
@@ -167,12 +168,14 @@ const How = () => {
                     <p className="relative text-sm text-green-100/80 leading-relaxed max-w-sm mx-auto mb-8">
                         Find your tutor and book your first session in just a few minutes.
                     </p>
-                    <button className="relative flex items-center gap-2 px-7 py-3.5 rounded-full bg-green-700 hover:bg-green-600 text-white font-bold text-sm transition-colors border-none cursor-pointer mx-auto">
-                        Find a tutor <FiArrowRight size={15} />
-                    </button>
+
+                    <Link to={'/signup'}>
+                        <button className="relative flex items-center gap-2 px-7 py-3.5 rounded-full bg-green-700 hover:bg-green-600 text-white font-bold text-sm transition-colors border-none cursor-pointer mx-auto">
+                            Find a tutor <FiArrowRight size={15} />
+                        </button>
+                    </Link>
                 </div>
             </section>
-
             <Footer />
         </div>
     );

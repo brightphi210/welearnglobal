@@ -4,6 +4,7 @@ import {
     FaHandsHelping
 } from "react-icons/fa";
 import { FiArrowRight } from "react-icons/fi";
+import { Link } from "react-router-dom";
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
 
@@ -146,12 +147,18 @@ const About = () => {
                         Join as a student to learn, or as a tutor to teach. Either way, it takes less than 2 minutes.
                     </p>
                     <div className="relative flex flex-wrap gap-3 justify-center">
-                        <button className="flex items-center gap-2 px-6 sm:px-7 py-3.5 rounded-full bg-green-700 hover:bg-green-600 text-white font-bold text-sm transition-colors border-none cursor-pointer">
-                            Get started <FiArrowRight size={15} />
-                        </button>
-                        <button className="px-6 sm:px-7 py-3.5 rounded-full border border-white/25 bg-white/10 text-white font-semibold text-sm hover:bg-white/20 transition-colors cursor-pointer">
-                            Become a tutor
-                        </button>
+                        <Link to={'/signup'}>
+                            <button className="flex items-center gap-2 px-6 sm:px-7 py-3.5 rounded-full bg-green-700 hover:bg-green-600 text-white font-bold text-sm transition-colors border-none cursor-pointer">
+                                Get started <FiArrowRight size={15} />
+                            </button>
+                        </Link>
+
+                        <Link to={'/signup'}>
+                            <button className="px-6 sm:px-7 py-3.5 rounded-full border border-white/25 bg-white/10 text-white font-semibold text-sm hover:bg-white/20 transition-colors cursor-pointer">
+                                Become a tutor
+                            </button>
+                        </Link>
+
                     </div>
                 </div>
             </section>

@@ -214,6 +214,8 @@ const StartChatModal = ({
     );
 };
 
+const APPROVAL_CONFIRMATION_PHRASE = "I have acknowledged";
+
 const ChatSuccessModal = ({
     onClose,
     onViewMessage,
@@ -267,67 +269,87 @@ const CompletionApprovalModal = ({
     submitError: string | null;
     tutorName: string;
     tutorNote?: string;
-}) => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={isSubmitting ? undefined : onClose} />
+}) => {
+    const [confirmText, setConfirmText] = useState("");
+    const isConfirmed = confirmText.trim().toLowerCase() === APPROVAL_CONFIRMATION_PHRASE.toLowerCase();
 
-        <div className="relative bg-white rounded-2xl border border-gray-200 shadow-xl max-w-md w-full p-6 sm:p-7">
-            <button
-                onClick={onClose}
-                disabled={isSubmitting}
-                className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-                <FiX size={16} />
-            </button>
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={isSubmitting ? undefined : onClose} />
 
-            <div className="w-12 h-12 rounded-2xl bg-green-100 flex items-center justify-center mb-4">
-                <FiCheckCircle size={20} className="text-green-700" />
-            </div>
+            <div className="relative bg-white rounded-2xl border border-gray-200 shadow-xl max-w-md w-full p-6 sm:p-7">
+                <button
+                    onClick={onClose}
+                    disabled={isSubmitting}
+                    className="absolute top-4 right-4 p-1.5 text-gray-400 hover:text-gray-600 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                    <FiX size={16} />
+                </button>
 
-            <h3 className="text-lg font-extrabold text-gray-900 mb-1.5">
-                {tutorName} marked this session complete
-            </h3>
-            <p className="text-sm text-gray-500 leading-relaxed mb-4">
-                Please confirm the session happened as expected. If that's right, approve it below.
-                If something's off, contact support instead of approving.
-            </p>
-
-            {tutorNote && (
-                <div className="mb-5 rounded-xl bg-gray-50 border border-gray-200 p-3">
-                    <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1">
-                        Note from {tutorName}
-                    </p>
-                    <p className="text-sm text-gray-600 wrap-break-word">{tutorNote}</p>
+                <div className="w-12 h-12 rounded-2xl bg-green-100 flex items-center justify-center mb-4">
+                    <FiCheckCircle size={20} className="text-green-700" />
                 </div>
-            )}
 
-            {submitError && <p className="text-xs text-red-500 font-medium mb-3">{submitError}</p>}
+                <h3 className="text-lg font-extrabold text-gray-900 mb-1.5">
+                    {tutorName} marked this session complete
+                </h3>
+                <p className="text-sm text-gray-500 leading-relaxed mb-4">
+                    Please confirm the session happened as expected. If that's right, approve it below.
+                    If something's off, contact support instead of approving.
+                </p>
 
-            <div className="flex flex-col gap-2">
-                <button
-                    onClick={onApprove}
-                    disabled={isSubmitting}
-                    className="w-full py-3.5 bg-green-700 text-white rounded-full text-xs font-semibold hover:bg-green-800 transition-all disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                    {isSubmitting ? "Approving..." : (
-                        <>
-                            <FiCheckCircle size={14} />
-                            Approve Completion
-                        </>
-                    )}
-                </button>
-                <button
-                    onClick={onContactSupport}
-                    disabled={isSubmitting}
-                    className="w-full py-3.5 bg-gray-100 border border-gray-200 rounded-full text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                    <FiAlertTriangle size={14} />
-                    This isn't right — Contact Support
-                </button>
+                {tutorNote && (
+                    <div className="mb-5 rounded-xl bg-gray-50 border border-gray-200 p-3">
+                        <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                            Note from {tutorName}
+                        </p>
+                        <p className="text-sm text-gray-600 wrap-break-word">{tutorNote}</p>
+                    </div>
+                )}
+
+                <div className="mb-5">
+                    <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                        Type "<span className="text-green-700">{APPROVAL_CONFIRMATION_PHRASE}</span>" to confirm
+                    </label>
+                    <input
+                        type="text"
+                        value={confirmText}
+                        onChange={(e) => setConfirmText(e.target.value)}
+                        disabled={isSubmitting}
+                        placeholder={APPROVAL_CONFIRMATION_PHRASE}
+                        className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400 disabled:opacity-60 disabled:cursor-not-allowed"
+                    />
+                </div>
+
+                {submitError && <p className="text-xs text-red-500 font-medium mb-3">{submitError}</p>}
+
+                <div className="flex flex-col gap-2">
+                    <button
+                        onClick={onApprove}
+                        disabled={isSubmitting || !isConfirmed}
+                        title={!isConfirmed ? `Type "${APPROVAL_CONFIRMATION_PHRASE}" to enable this button` : undefined}
+                        className="w-full py-3.5 bg-green-700 text-white rounded-full text-xs font-semibold hover:bg-green-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                        {isSubmitting ? "Approving..." : (
+                            <>
+                                <FiCheckCircle size={14} />
+                                Approve Completion
+                            </>
+                        )}
+                    </button>
+                    <button
+                        onClick={onContactSupport}
+                        disabled={isSubmitting}
+                        className="w-full py-3.5 bg-gray-100 border border-gray-200 rounded-full text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                        <FiAlertTriangle size={14} />
+                        This isn't right — Contact Support
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 const StudentSessionDetail = () => {
     const { id } = useParams<{ id: string }>();

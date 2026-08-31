@@ -123,24 +123,31 @@ const BookingCard = ({
   onOpenSessionDetails: (booking: RawBooking) => void;
 }) => {
   const [imgError, setImgError] = useState(false);
+  const [isRequestingPayment, setIsRequestingPayment] = useState(false);
 
   const { getPaymentUrl, isLoading: isPaying } = useMakePayment(booking.id);
+
   const handlePayment = async () => {
+    if (isRequestingPayment) return; // guard against double-clicks
+    setIsRequestingPayment(true);
     try {
       const response = await getPaymentUrl;
       const url = response?.data?.checkout_url;
 
       if (!url) {
         toast("No payment link was returned. Please try again.", { type: "error" });
+        setIsRequestingPayment(false);
         return;
       }
 
+      // Keep the loading state on — we're navigating away.
       window.location.href = url;
     } catch (error) {
       console.error("Payment error:", error);
       toast("Something went wrong starting your payment. Please try again.", {
         type: "error",
       });
+      setIsRequestingPayment(false);
     }
   };
 
@@ -239,11 +246,17 @@ const BookingCard = ({
         {booking.status === "accepted" && (
           <button
             onClick={handlePayment}
-            disabled={isPaying}
-
+            disabled={isRequestingPayment || isPaying}
             className="w-full flex items-center justify-center gap-1.5 px-4 cursor-pointer py-3 bg-green-900 text-white rounded-full text-xs font-semibold hover:bg-green-800 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isPaying ? "Processing..." : "Proceed to Payment"}
+            {isRequestingPayment || isPaying ? (
+              <>
+                <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                Processing...
+              </>
+            ) : (
+              "Proceed to Payment"
+            )}
           </button>
         )}
 

@@ -1,26 +1,13 @@
-import { useState } from "react";
-import { FaEnvelope, FaMapMarkerAlt, FaPhoneAlt } from "react-icons/fa";
-import { FiSend } from "react-icons/fi";
+import { FaEnvelope, FaPhoneAlt } from "react-icons/fa";
 import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
 
 const contactInfo = [
-    { icon: <FaEnvelope size={18} className="text-green-700" />, label: "Email us", value: "support@welearnglobal.com" },
-    { icon: <FaPhoneAlt size={18} className="text-green-700" />, label: "Call us", value: "+1 (555) 123-4567" },
-    { icon: <FaMapMarkerAlt size={18} className="text-green-700" />, label: "Visit us", value: "123 Learning Ave, San Francisco, CA" },
+    { icon: <FaEnvelope size={18} className="text-green-700" />, label: "Email us", value: "welearn562@gmail.com" },
+    { icon: <FaPhoneAlt size={18} className="text-green-700" />, label: "Call us", value: "+234 813 113 3113" },
 ];
 
 const Contact = () => {
-    const [form, setForm] = useState({ name: "", email: "", message: "" });
-
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setForm({ ...form, [e.target.name]: e.target.value });
-    };
-
-    const handleSubmit = () => {
-        console.log(form);
-        // hook up to your backend/email service here
-    };
 
     return (
         <div className="font-sans text-gray-900 bg-white">
@@ -41,7 +28,7 @@ const Contact = () => {
 
             {/* ── CONTACT CONTENT ── */}
             <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-white">
-                <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-10 lg:gap-12">
+                <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-1">
                     {/* Info column */}
                     <div className="lg:col-span-2 space-y-6">
                         <div>
@@ -61,51 +48,6 @@ const Contact = () => {
                                 </div>
                             </div>
                         ))}
-                    </div>
-
-                    {/* Form column */}
-                    <div className="lg:col-span-3">
-                        <div className="bg-gray-50 border border-gray-100 rounded-3xl p-6 sm:p-8">
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="text-xs font-semibold text-gray-700 block mb-1.5">Full name</label>
-                                    <input
-                                        name="name"
-                                        value={form.name}
-                                        onChange={handleChange}
-                                        placeholder="Jane Doe"
-                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-green-600 bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-semibold text-gray-700 block mb-1.5">Email address</label>
-                                    <input
-                                        name="email"
-                                        value={form.email}
-                                        onChange={handleChange}
-                                        placeholder="jane@example.com"
-                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-green-600 bg-white"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-semibold text-gray-700 block mb-1.5">Message</label>
-                                    <textarea
-                                        name="message"
-                                        value={form.message}
-                                        onChange={handleChange}
-                                        rows={5}
-                                        placeholder="How can we help?"
-                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm outline-none focus:border-green-600 bg-white resize-none"
-                                    />
-                                </div>
-                                <button
-                                    onClick={handleSubmit}
-                                    className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-full bg-green-700 hover:bg-green-800 text-white font-semibold text-sm transition-colors border-none cursor-pointer"
-                                >
-                                    Send message <FiSend size={15} />
-                                </button>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </section>
