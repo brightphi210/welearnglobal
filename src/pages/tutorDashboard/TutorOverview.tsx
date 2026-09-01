@@ -55,10 +55,9 @@ const TutorOverview = () => {
         setShowCompletionModal(false);
     };
 
-    // ── Upcoming sessions (real bookings, same formatting as Bookings page) ──
     const { myBookingsAsTutor, isLoading: bookingsLoading } = useGetMyBookingsAsTutor();
     const myBookings = Array.isArray(myBookingsAsTutor?.data) ? myBookingsAsTutor.data : [];
-    console.log("myBookingsAsTutor", tutorStatsData)
+    // console.log("myBookingsAsTutor", tutorStatsData)
 
     const upcomingSessions = useMemo(() => {
         return myBookings
