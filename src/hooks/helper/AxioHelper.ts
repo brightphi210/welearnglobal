@@ -2,9 +2,14 @@
 import axios from "axios";
 
 const BASE_URL = "https://api.welearnglobal.online/api/v1/";
+const BASE_URL2 = "https://api.welearnglobal.online/";
 
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
+});
+
+const axiosInstance2 = axios.create({
+  baseURL: BASE_URL2,
 });
 
 // Redirect to login whenever any request comes back 401(expired / invalid token)
@@ -29,6 +34,16 @@ export const post_requests = async (url: string, data: any, token = "") => {
   }
 
   const response = await axiosInstance.post(url, data, { headers });
+  return response;
+};
+
+export const post_requests2 = async (url: string, data: any, token = "") => {
+  let headers = {};
+  if (token !== "") {
+    headers = { Authorization: `Bearer ${token}` };
+  }
+
+  const response = await axiosInstance2.post(url, data, { headers });
   return response;
 };
 

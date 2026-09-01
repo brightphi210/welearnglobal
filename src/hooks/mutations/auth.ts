@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { patch_requests, post_requests } from "../helper/AxioHelper";
+import { patch_requests, post_requests, post_requests2 } from "../helper/AxioHelper";
 
 export const useRegistration = () => {
   const registrationMutation = useMutation({
@@ -17,6 +17,33 @@ export const useLogin = () => {
 
   return loginMutation;
 };
+
+export const useForgetPassword2 = () => {
+  const forgetPassword = useMutation({
+    mutationFn: async (data: any) => {
+      const token = (await localStorage.getItem("welearnToken")) || ""
+      return post_requests2(`password-reset/`, data, token)
+    },
+  })
+
+  return forgetPassword
+}
+
+export const useResetPassword = () => {
+  const resetPassword = useMutation({
+    mutationFn: async (data: any) => {
+      const token = (await localStorage.getItem("welearnToken")) || ""
+      return post_requests2(`password-reset/confirm/`, data, token)
+    },
+  })
+
+  return resetPassword
+}
+
+
+
+
+
 
 
 

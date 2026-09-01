@@ -10,10 +10,12 @@ import './index.css'
 import About from './pages/About'
 import ConfirmingPayment from './pages/ConfirmatingPayment'
 import Contact from './pages/Contact'
+import ForgotPassword from './pages/ForgetPassword'
 import Home from './pages/Home'
 import How from './pages/How'
 import Login from './pages/Login'
 import RegisterSuccessful from './pages/RegisterSuccessful'
+import ResetPassword from './pages/ResetPassword'
 import Signup from './pages/Signup'
 import VerifyEmail from './pages/VerifyEmail'
 import AuthProvider from './providers/AuthProvider'
@@ -34,7 +36,8 @@ const App = () => {
             <Route path="/how-it-works" element={<How />} />
             <Route path='confirmation/payment' element={<ConfirmingPayment />} />
             <Route path="/register-successful" element={<RegisterSuccessful />} />
-
+            <Route path="forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             <Route
               path="/student/dashboard/*"

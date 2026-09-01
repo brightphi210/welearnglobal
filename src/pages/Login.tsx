@@ -111,6 +111,15 @@ const Login = () => {
                                     {showPassword ? <FiEyeOff size={15} /> : <FiEye size={15} />}
                                 </button>
                             </div>
+
+                            <div className="flex items-center justify-between mb-2 pt-4">
+                                <Link
+                                    to="/forgot-password"
+                                    className="text-xs font-semibold text-emerald-500 hover:text-emerald-600 no-underline transition-colors"
+                                >
+                                    Forgot password?
+                                </Link>
+                            </div>
                         </div>
 
                         {/* Error Message */}
@@ -133,6 +142,8 @@ const Login = () => {
                             <div className="flex-1 h-px bg-gray-100" />
                         </div>
                     </div>
+
+
 
                     {/* Footer */}
                     <div className="px-8 py-5 bg-gray-50 border-t border-gray-100 text-center">
