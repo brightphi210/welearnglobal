@@ -1,10 +1,33 @@
 import { useState } from "react";
-import { FiMail } from "react-icons/fi";
+import { FiExternalLink, FiMail } from "react-icons/fi";
 import { Link } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import AuthNavbar from "../components/AuthNavbar";
 import LoadingOverlay from "../components/LoadingOverlay";
 import { useForgetPassword2 } from "../hooks/mutations/auth";
+
+// Maps common email domains to their webmail inbox URL.
+// Falls back to a generic mailto: link if the domain isn't recognized.
+const getMailProviderUrl = (email: string) => {
+    const domain = email.split("@")[1]?.toLowerCase() || "";
+
+    const providers: Record<string, string> = {
+        "gmail.com": "https://mail.google.com/mail/u/0/#inbox",
+        "googlemail.com": "https://mail.google.com/mail/u/0/#inbox",
+        "outlook.com": "https://outlook.live.com/mail/0/inbox",
+        "hotmail.com": "https://outlook.live.com/mail/0/inbox",
+        "live.com": "https://outlook.live.com/mail/0/inbox",
+        "yahoo.com": "https://mail.yahoo.com/",
+        "icloud.com": "https://www.icloud.com/mail",
+        "me.com": "https://www.icloud.com/mail",
+        "aol.com": "https://mail.aol.com/",
+        "zoho.com": "https://mail.zoho.com/",
+        "protonmail.com": "https://mail.proton.me/",
+        "proton.me": "https://mail.proton.me/",
+    };
+
+    return providers[domain] || `mailto:${email}`;
+};
 
 const ForgotPassword = () => {
     const [email, setEmail] = useState("");
@@ -94,7 +117,27 @@ const ForgotPassword = () => {
                         </div>
                     )}
 
-                    {submitted && <div className="px-8 py-8" />}
+                    {submitted && (
+                        <div className="px-8 py-8 flex flex-col items-center gap-4">
+                            <a
+                                href={getMailProviderUrl(email)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-full bg-green-950 text-white font-bold text-xs hover:opacity-90 hover:-translate-y-px transition-all no-underline shadow-md shadow-emerald-200"
+                            >
+                                <FiMail size={15} />
+                                Open Mail
+                                <FiExternalLink size={13} />
+                            </a>
+                            <button
+                                type="button"
+                                onClick={() => setSubmitted(false)}
+                                className="text-xs text-gray-400 hover:text-gray-600 transition-colors bg-transparent border-none cursor-pointer"
+                            >
+                                Didn't get it? Try a different email
+                            </button>
+                        </div>
+                    )}
 
                     {/* Footer */}
                     <div className="px-8 py-5 bg-gray-50 border-t border-gray-100 text-center">

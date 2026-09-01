@@ -58,7 +58,7 @@ const TutorOverview = () => {
     // ── Upcoming sessions (real bookings, same formatting as Bookings page) ──
     const { myBookingsAsTutor, isLoading: bookingsLoading } = useGetMyBookingsAsTutor();
     const myBookings = Array.isArray(myBookingsAsTutor?.data) ? myBookingsAsTutor.data : [];
-    console.log("myBookingsAsTutor", myBookingsAsTutor)
+    console.log("myBookingsAsTutor", tutorStatsData)
 
     const upcomingSessions = useMemo(() => {
         return myBookings
@@ -109,8 +109,8 @@ const TutorOverview = () => {
         },
         {
             id: 3,
-            label: "Completed Sessions",
-            value: tutorStatsData?.completed_sessions,
+            label: "Weekly Earnings",
+            value: tutorStatsData?.weekly_earnings,
             trendColor: "text-green-600",
             icon: FiCheckCircle,
         },
