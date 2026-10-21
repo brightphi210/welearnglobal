@@ -37,8 +37,8 @@ const stats = [
 ];
 
 const team = [
-    { name: "Amaechi Nkwa", role: "CEO & Manager", img: ceo },
-    { name: "Daniel Wu", role: "Co-CEO", img: coceo },
+    { name: "Amechi B. Nkwa", role: "CEO & Manager", img: ceo },
+    { name: "Uchechi Francisca Amechi", role: "Co-CEO", img: coceo },
     { name: "Bright Philip", role: "Software Engineer", img: developer },
 ];
 
